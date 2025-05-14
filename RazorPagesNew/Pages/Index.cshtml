@@ -1,10 +1,37 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Главная страница";
 }
 
 <div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+    <h1 class="display-4">Добро пожаловать</h1>
+
+    @if (User.Identity!.IsAuthenticated)
+    {
+        <p>Вы вошли как <strong>@User.Identity.Name</strong></p>
+        <p>Роли:</p>
+        <ul class="list-group">
+            @if (User.IsInRole("Admin"))
+            {
+                <li class="list-group-item">Администратор</li>
+            }
+            @if (User.IsInRole("HR"))
+            {
+                <li class="list-group-item">HR-специалист</li>
+            }
+            @if (User.IsInRole("Evaluator"))
+            {
+                <li class="list-group-item">Оценщик</li>
+            }
+            @if (User.IsInRole("User"))
+            {
+                <li class="list-group-item">Пользователь</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>Пожалуйста, <a asp-page="/Account/Login">войдите</a> или <a asp-page="/Account/Register">зарегистрируйтесь</a>, чтобы продолжить.</p>
+    }
 </div>

@@ -1,0 +1,30 @@
+﻿@page
+@model RazorPagesNew.Pages.RegisterModel
+@{
+    ViewData["Title"] = "Register";
+}
+
+<h2>Register</h2>
+
+<form method="post">
+    <div class="form-group">
+        <label for="Input_Email">Email</label>
+        <input type="email" id="Input_Email" name="Input.Email" class="form-control" required />
+    </div>
+
+    <div class="form-group">
+        <label for="Input_Password">Password</label>
+        <input type="password" id="Input_Password" name="Input.Password" class="form-control" required />
+    </div>
+
+    <div class="form-group">
+        <label for="Input_ConfirmPassword">Confirm Password</label>
+        <input type="password" id="Input_ConfirmPassword" name="Input.ConfirmPassword" class="form-control" required />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Register</button>
+</form>
+
+<p>
+    Already have an account? <a href="/Account/Login">Log in</a>
+</p>

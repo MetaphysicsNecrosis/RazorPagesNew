@@ -1,8 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace RazorPagesNew.Pages
+namespace RazorPagesNew.Pages.Profile
 {
+    [Authorize(Policy = "RequireUserRole")]
     public class IndexModel : PageModel
     {
         private readonly ILogger<IndexModel> _logger;
@@ -14,10 +15,7 @@ namespace RazorPagesNew.Pages
 
         public void OnGet()
         {
-            if (User.Identity?.IsAuthenticated == true)
-            {
-                _logger.LogInformation("Пользователь {UserName} зашел на главную страницу", User.Identity.Name);
-            }
+            _logger.LogInformation("Пользователь {UserName} просматривает свой профиль", User.Identity?.Name);
         }
     }
 }

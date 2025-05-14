@@ -28,7 +28,7 @@ namespace RazorPagesNew.Data
         public DbSet<EvaluationScore> EvaluationScores { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+       /* protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
@@ -164,6 +164,6 @@ namespace RazorPagesNew.Data
                     entry.Entity.UpdatedAt = now;
                 }
             }
-        }
+        }*/
     }
 }
