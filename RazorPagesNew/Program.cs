@@ -20,7 +20,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         sqlOptions => sqlOptions.EnableRetryOnFailure()
     )
 );
-
+builder.Services.AddDbContext<MyIdentityDbContext>(options =>
+    options.UseSqlServer(
+        configuration.GetConnectionString("DefaultConnectionIdentity"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure()
+    )
+);
 // Добавление Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => {
     // Настройка параметров пароля
@@ -37,7 +42,7 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => {
     // Настройки пользователя
     options.User.RequireUniqueEmail = true;
 })
-.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddEntityFrameworkStores<MyIdentityDbContext>()
 .AddDefaultTokenProviders();
 
 // Настройка сервисов аутентификации

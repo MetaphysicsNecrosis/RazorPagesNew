@@ -51,7 +51,7 @@ namespace RazorPagesNew.Data
                 .HasOne(t => t.User)
                 .WithMany(u => u.RefreshTokens)
                 .HasForeignKey(t => t.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // <-- ВАЖНО: убрал каскад
 
             // Сотрудник и отдел
             modelBuilder.Entity<Models.Employee>()
@@ -60,26 +60,28 @@ namespace RazorPagesNew.Data
                 .HasForeignKey(e => e.DepartmentId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Сотрудник и его записи
+            // Посещаемость
             modelBuilder.Entity<AttendanceRecord>()
                 .HasOne(a => a.Employee)
                 .WithMany(e => e.AttendanceRecords)
                 .HasForeignKey(a => a.EmployeeId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
+            // Отпуска
             modelBuilder.Entity<LeaveRecord>()
                 .HasOne(l => l.Employee)
                 .WithMany(e => e.LeaveRecords)
                 .HasForeignKey(l => l.EmployeeId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
+            // Задачи
             modelBuilder.Entity<TaskRecord>()
                 .HasOne(t => t.Employee)
                 .WithMany(e => e.Tasks)
                 .HasForeignKey(t => t.EmployeeId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Оценки и сотрудники
+            // Оценки
             modelBuilder.Entity<EmployeeEvaluation>()
                 .HasOne(ee => ee.Employee)
                 .WithMany(e => e.Evaluations)
@@ -98,19 +100,19 @@ namespace RazorPagesNew.Data
                 .HasForeignKey(ee => ee.SummaryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Сводка активности и сотрудник
+            // Сводка
             modelBuilder.Entity<WorkActivitySummary>()
                 .HasOne(was => was.Employee)
                 .WithMany(e => e.ActivitySummaries)
                 .HasForeignKey(was => was.EmployeeId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Оценки критериев
             modelBuilder.Entity<EvaluationScore>()
                 .HasOne(es => es.Evaluation)
                 .WithMany(ee => ee.Scores)
                 .HasForeignKey(es => es.EvaluationId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // <- тоже убираем каскад
 
             modelBuilder.Entity<EvaluationScore>()
                 .HasOne(es => es.Criterion)
@@ -118,7 +120,7 @@ namespace RazorPagesNew.Data
                 .HasForeignKey(es => es.CriterionId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Глобальные фильтры
+            // Аудит
             ApplyGlobalFilters(modelBuilder);
         }
 
@@ -128,8 +130,11 @@ namespace RazorPagesNew.Data
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
                 // Применение аудита (CreatedAt и UpdatedAt)
-                modelBuilder.Entity(entityType.ClrType).Property<DateTime>("CreatedAt");
-                modelBuilder.Entity(entityType.ClrType).Property<DateTime?>("UpdatedAt");
+                if (typeof(Models.BaseEntity).IsAssignableFrom(entityType.ClrType))
+                {
+                    modelBuilder.Entity(entityType.ClrType).Property<DateTime>("CreatedAt");
+                    modelBuilder.Entity(entityType.ClrType).Property<DateTime?>("UpdatedAt");
+                }
             }
         }
 
