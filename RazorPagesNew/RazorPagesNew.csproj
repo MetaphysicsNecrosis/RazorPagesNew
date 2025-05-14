@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>aspnet-RazorPagesNew-66eb8847-d13b-4b92-a2a7-87dcb0bd3996</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.15" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.15" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.15" />
+  </ItemGroup>
+
+</Project>
