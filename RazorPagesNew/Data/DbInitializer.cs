@@ -46,7 +46,7 @@ namespace RazorPagesNew.Data
             context.SaveChanges();
 
             // Создание администратора
-            var passwordHasher = new BCrypt.Net.BCrypt.HashPassword(); // Или любой другой хешер паролей
+           /* var passwordHasher = new BCrypt.Net.BCrypt.HashPassword(); // Или любой другой хешер паролей*/
             var adminUser = new User
             {
                 Username = "admin",
