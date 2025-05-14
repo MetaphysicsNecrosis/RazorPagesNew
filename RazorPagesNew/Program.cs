@@ -1,40 +1,169 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using RazorPagesNew.Data;
+using RazorPagesNew.Services.Implementation;
+using RazorPagesNew.Services.Interfaces;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
-builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+// Добавление конфигурации из appsettings.json
+var configuration = builder.Configuration;
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>();
-builder.Services.AddRazorPages();
+// Настройка контекста базы данных
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(
+        configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure()
+    )
+);
+
+// Настройка сервисов аутентификации
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.SaveToken = true;
+    options.RequireHttpsMetadata = false;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = configuration["JWT:Issuer"],
+        ValidAudience = configuration["JWT:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"]))
+    };
+})
+.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.LogoutPath = "/Account/Logout";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+    options.ExpireTimeSpan = TimeSpan.FromHours(24);
+    options.SlidingExpiration = true;
+});
+
+// Настройка авторизации
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("RequireHRRole", policy => policy.RequireRole("HR"));
+    options.AddPolicy("RequireEvaluatorRole", policy => policy.RequireRole("Evaluator"));
+    options.AddPolicy("RequireUserRole", policy => policy.RequireRole("User"));
+});
+
+// Настройка сессий
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
+// Регистрация сервисов
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IEvaluationService, EvaluationService>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
+// Настройка политики CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigins",
+        builder => builder
+            .WithOrigins(configuration.GetSection("AllowedOrigins").Get<string[]>())
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials()
+    );
+});
+
+// Настройка Razor Pages
+builder.Services.AddRazorPages(options =>
+{
+    options.Conventions.AuthorizeFolder("/Admin", "RequireAdminRole");
+    options.Conventions.AuthorizeFolder("/HR", "RequireHRRole");
+    options.Conventions.AuthorizeFolder("/Evaluations", "RequireEvaluatorRole");
+    options.Conventions.AuthorizePage("/Profile", "RequireUserRole");
+});
+/*.AddRazorRuntimeCompilation(); // Добавляем поддержку горячей перезагрузки для разработки*/
+
+// Настройка Anti-forgery token
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-XSRF-TOKEN";
+    options.SuppressXFrameOptionsHeader = false;
+});
+
+// Настройка HTTP контекста
+builder.Services.AddHttpContextAccessor();
+
+// Опционально: Настройка сервисов кэширования
+builder.Services.AddMemoryCache();
+builder.Services.AddDistributedMemoryCache();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Настройка конвейера HTTP
 if (app.Environment.IsDevelopment())
 {
-    app.UseMigrationsEndPoint();
+    app.UseDeveloperExceptionPage();
 }
 else
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
+// Настройка маршрутизации
 app.UseRouting();
 
+// Применение CORS политики
+app.UseCors("AllowSpecificOrigins");
+
+// Настройка аутентификации и авторизации
+app.UseAuthentication();
 app.UseAuthorization();
 
+// Использование сессий
+app.UseSession();
+
+// Глобальный обработчик ошибок
+app.UseStatusCodePagesWithReExecute("/Error/{0}");
+
+// Конфигурация конечных точек
 app.MapRazorPages();
+
+// Опционально: API эндпоинты
+app.MapControllers();
+
+// Инициализация базы данных 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var dbContext = services.GetRequiredService<ApplicationDbContext>();
+        DbInitializer.Initialize(dbContext);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
+    }
+}
 
 app.Run();
