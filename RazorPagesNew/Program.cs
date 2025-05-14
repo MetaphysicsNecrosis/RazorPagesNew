@@ -21,6 +21,25 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     )
 );
 
+// Добавление Identity
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => {
+    // Настройка параметров пароля
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequiredLength = 8;
+
+    // Настройки блокировки
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+
+    // Настройки пользователя
+    options.User.RequireUniqueEmail = true;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+
 // Настройка сервисов аутентификации
 builder.Services.AddAuthentication(options =>
 {
@@ -77,11 +96,18 @@ builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 // Настройка политики CORS
+var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>();
+
+if (allowedOrigins == null || !allowedOrigins.Any())
+{
+    throw new InvalidOperationException("AllowedOrigins is not configured in appsettings.json.");
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigins",
         builder => builder
-            .WithOrigins(configuration.GetSection("AllowedOrigins").Get<string[]>())
+            .WithOrigins(allowedOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials()
