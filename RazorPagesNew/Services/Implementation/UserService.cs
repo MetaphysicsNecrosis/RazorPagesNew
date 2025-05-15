@@ -43,6 +43,12 @@ namespace RazorPagesNew.Services.Implementation
         /// <summary>
         /// Получение пользователя по ID
         /// </summary>
+        public async Task<User> GetByIdAsync(string id)
+        {
+            return await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.IdentityUserId == id);
+        }
         public async Task<User> GetByIdAsync(int id)
         {
             return await _context.Users

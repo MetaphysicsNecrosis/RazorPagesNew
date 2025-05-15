@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using RazorPagesNew.Data;
+using RazorPagesNew.Models;
+using RazorPagesNew.Services.Interfaces;
 using System.ComponentModel.DataAnnotations;
 
 namespace RazorPagesNew.Pages
@@ -9,11 +12,13 @@ namespace RazorPagesNew.Pages
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly IUserService _userService;
 
-        public RegisterModel(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager)
+        public RegisterModel(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IUserService userService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _userService = userService;
         }
 
         [BindProperty]
@@ -47,8 +52,17 @@ namespace RazorPagesNew.Pages
 
             if (result.Succeeded)
             {
+                var userLocal = new User
+                {
+                    Username = user.UserName,
+                    IdentityUserId = user.Id,
+                    RoleId = 1, // например, админ
+                    PasswordHash = "не используетс€, если вход через Identity"
+                };
+                await _userService.CreateUserAsync(userLocal, "NoPassword");
                 // ѕосле успешной регистрации автоматически авторизуем пользовател€
                 await _signInManager.SignInAsync(user, isPersistent: false);
+
 
                 // ѕеренаправл€ем на главную страницу или другую страницу после регистрации
                 return RedirectToPage("/Index");

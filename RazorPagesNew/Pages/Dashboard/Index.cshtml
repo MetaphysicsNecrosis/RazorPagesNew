@@ -1,0 +1,245 @@
+﻿@page
+@model RazorPagesNew.Pages.Dashboard.IndexModel
+@{
+    ViewData["Title"] = "Дашборд оценки персонала банка";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Дашборд оценки персонала банка</h5>
+                </div>
+                <div class="card-body">
+                    <p>Добро пожаловать в автоматизированную систему оценки персонала. Эта система позволяет:</p>
+                    <ul>
+                        <li>Отслеживать эффективность сотрудников в реальном времени</li>
+                        <li>Проводить регулярные оценки персонала</li>
+                        <li>Анализировать производительность по отделам</li>
+                        <li>Формировать отчеты для руководства</li>
+                    </ul>
+                    <p>Выберите нужный раздел через меню или используйте быстрые ссылки ниже.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card shadow h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-users-cog fa-3x text-primary mb-3"></i>
+                    <h5>Всего сотрудников</h5>
+                    <h2>@Model.TotalEmployees</h2>
+                    <p>По всем отделам</p>
+                    <a asp-page="/Employees/Index" class="btn btn-outline-primary btn-sm">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-star-half-alt fa-3x text-warning mb-3"></i>
+                    <h5>Средняя оценка</h5>
+                    <h2>@Model.AverageScore.ToString("F1")/100</h2>
+                    <p>По всем сотрудникам</p>
+                    <a asp-page="/Evaluations/Index" class="btn btn-outline-warning btn-sm">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-clipboard-check fa-3x text-success mb-3"></i>
+                    <h5>Проведено оценок</h5>
+                    <h2>@Model.TotalEvaluations</h2>
+                    <p>За текущий месяц</p>
+                    <a asp-page="/Evaluations/Index" class="btn btn-outline-success btn-sm">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-tasks fa-3x text-info mb-3"></i>
+                    <h5>Выполнено задач</h5>
+                    <h2>@Model.CompletedTasks</h2>
+                    <p>За текущий месяц</p>
+                    <a asp-page="/Activity/Tasks" class="btn btn-outline-info btn-sm">Подробнее</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Лучшие сотрудники месяца</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Сотрудник</th>
+                                    <th>Отдел</th>
+                                    <th>Эффективность</th>
+                                    <th>Оценка</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var employee in Model.TopEmployees)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-page="/Employees/Details" asp-route-id="@employee.Id">@employee.FullName</a>
+                                        </td>
+                                        <td>@employee.Department.Name</td>
+                                        <td>@employee.Efficiency.ToString("P0")</td>
+                                        <td>
+                                            <div class="progress">
+                                                <div class="progress-bar bg-success" role="progressbar"
+                                                     style="width: @(employee.Score)%"
+                                                     aria-valuenow="@(employee.Score)"
+                                                     aria-valuemin="0"
+                                                     aria-valuemax="100">
+                                                    @(employee.Score)%
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Эффективность по отделам</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Отдел</th>
+                                    <th>Сотрудников</th>
+                                    <th>Ср. оценка</th>
+                                    <th>Эффективность</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var dept in Model.DepartmentPerformance)
+                                {
+                                    <tr>
+                                        <td>@dept.Name</td>
+                                        <td>@dept.EmployeeCount</td>
+                                        <td>@dept.AverageScore.ToString("F1")</td>
+                                        <td>
+                                            <div class="progress">
+                                                <div class="progress-bar bg-info" role="progressbar"
+                                                     style="width: @(dept.AverageScore)%"
+                                                     aria-valuenow="@(dept.AverageScore)"
+                                                     aria-valuemin="0"
+                                                     aria-valuemax="100">
+                                                    @(dept.AverageScore)%
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Последние оценки</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Сотрудник</th>
+                                    <th>Дата оценки</th>
+                                    <th>Оценка</th>
+                                    <th>Руководитель</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var eval in Model.RecentEvaluations)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-page="/Employees/Details" asp-route-id="@eval.EmployeeId">@eval.Employee.FullName</a>
+                                        </td>
+                                        <td>@eval.EvaluationDate.ToShortDateString()</td>
+                                        <td>
+                                            <div class="progress">
+                                                <div class="progress-bar @(eval.Score >= 70 ? "bg-success" : eval.Score >= 50 ? "bg-warning" : "bg-danger")"
+                                                     role="progressbar" style="width: @(eval.Score)%"
+                                                     aria-valuenow="@(eval.Score)" aria-valuemin="0"
+                                                     aria-valuemax="100">
+                                                    @(eval.Score)%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>@eval.Evaluator.Username</td>
+                                        <td>
+                                            <a asp-page="/Evaluations/Details" asp-route-id="@eval.Id" class="btn btn-outline-secondary btn-sm">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a asp-page="/Evaluations/Index" class="btn btn-outline-secondary">Все оценки</a>
+                    <a asp-page="/Evaluations/Create" class="btn btn-primary float-end">Создать оценку</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Быстрые действия</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a asp-page="/Employees/Create" class="btn btn-primary mb-2">
+                            <i class="fas fa-user-plus me-2"></i> Добавить сотрудника
+                        </a>
+                        <a asp-page="/Evaluations/Create" class="btn btn-success mb-2">
+                            <i class="fas fa-star me-2"></i> Провести оценку
+                        </a>
+                        <a asp-page="/Activity/Attendance" class="btn btn-info mb-2">
+                            <i class="fas fa-calendar-check me-2"></i> Учет посещаемости
+                        </a>
+                        <a asp-page="/Reports/EmployeePerformance" class="btn btn-warning mb-2">
+                            <i class="fas fa-chart-line me-2"></i> Отчет по эффективности
+                        </a>
+                        <a asp-page="/Criteria/Index" class="btn btn-secondary mb-2">
+                            <i class="fas fa-list me-2"></i> Критерии оценки
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

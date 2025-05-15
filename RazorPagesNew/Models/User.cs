@@ -14,7 +14,7 @@ namespace RazorPagesNew.Models
 
         [Required]
         public string PasswordHash { get; set; }
-
+        public string? IdentityUserId { get; set; } // ← Ссылка на AspNetUsers.Id
         public int RoleId { get; set; }
         public virtual Role Role { get; set; }
 
