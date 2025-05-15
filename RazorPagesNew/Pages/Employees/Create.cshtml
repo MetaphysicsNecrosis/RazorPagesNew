@@ -1,0 +1,164 @@
+﻿@page
+@model RazorPagesNew.Pages.Employees.CreateModel
+@{
+    ViewData["Title"] = "Добавление сотрудника";
+}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Добавление нового сотрудника</h5>
+                    <a asp-page="Index" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-1"></i> Вернуться к списку
+                    </a>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="needs-validation" novalidate>
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <!-- Основная информация -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <!-- Поле ФИО -->
+                                <div class="form-group mb-3">
+                                    <label asp-for="Employee.FullName" class="form-label">ФИО</label>
+                                    <input asp-for="Employee.FullName" class="form-control" required />
+                                    <span asp-validation-for="Employee.FullName" class="text-danger"></span>
+                                </div>
+
+                                <!-- Поле Email -->
+                                <div class="form-group mb-3">
+                                    <label asp-for="Employee.Email" class="form-label">Email</label>
+                                    <input asp-for="Employee.Email" class="form-control" type="email" required />
+                                    <span asp-validation-for="Employee.Email" class="text-danger"></span>
+                                </div>
+
+                                <!-- Поле Телефон -->
+                                <div class="form-group mb-3">
+                                    <label asp-for="Employee.Phone" class="form-label">Телефон</label>
+                                    <input asp-for="Employee.Phone" class="form-control" />
+                                    <span asp-validation-for="Employee.Phone" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <!-- Поле Должность -->
+                                <div class="form-group mb-3">
+                                    <label asp-for="Employee.Position" class="form-label">Должность</label>
+                                    <input asp-for="Employee.Position" class="form-control" required />
+                                    <span asp-validation-for="Employee.Position" class="text-danger"></span>
+                                </div>
+
+                                <!-- Поле Отдел -->
+                                <div class="form-group mb-3">
+                                    <label asp-for="Employee.DepartmentId" class="form-label">Отдел</label>
+                                    <select asp-for="Employee.DepartmentId" asp-items="Model.DepartmentList" class="form-select" required>
+                                        <option value="">-- Выберите отдел --</option>
+                                    </select>
+                                    <span asp-validation-for="Employee.DepartmentId" class="text-danger"></span>
+                                </div>
+
+                                <!-- Поле Дата найма -->
+                                <div class="form-group mb-3">
+                                    <label asp-for="Employee.HireDate" class="form-label">Дата найма</label>
+                                    <input asp-for="Employee.HireDate" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                                    <span asp-validation-for="Employee.HireDate" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Дополнительная информация -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <!-- Поле Баланс отпуска -->
+                                <div class="form-group mb-3">
+                                    <label asp-for="Employee.VacationBalance" class="form-label">Баланс отпуска (дни)</label>
+                                    <input asp-for="Employee.VacationBalance" class="form-control" type="number" value="28" min="0" step="0.5" />
+                                    <span asp-validation-for="Employee.VacationBalance" class="text-danger"></span>
+                                </div>
+
+                                <!-- Поле Использованный больничный -->
+                                <div class="form-group mb-3">
+                                    <label asp-for="Employee.SickLeaveUsed" class="form-label">Использованный больничный</label>
+                                    <input asp-for="Employee.SickLeaveUsed" class="form-control" type="number" value="0" min="0" step="0.5" />
+                                    <span asp-validation-for="Employee.SickLeaveUsed" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <!-- Поле Статус -->
+                                <div class="form-group mb-3">
+                                    <label asp-for="Employee.Status" class="form-label">Статус</label>
+                                    <select asp-for="Employee.Status" class="form-select">
+                                        <option value="Active">Активный</option>
+                                        <option value="OnLeave">В отпуске</option>
+                                        <option value="Terminated">Уволен</option>
+                                    </select>
+                                    <span asp-validation-for="Employee.Status" class="text-danger"></span>
+                                </div>
+
+                                <!-- Поле Фото -->
+                                <div class="form-group mb-3">
+                                    <label asp-for="Employee.PhotoPath" class="form-label">Фото</label>
+                                    <input asp-for="Employee.PhotoPath" class="form-control" type="file" />
+                                    <span asp-validation-for="Employee.PhotoPath" class="text-danger"></span>
+                                </div>
+
+                                <!-- Поле Тип занятости -->
+                                <div class="form-group mb-3">
+                                    <label asp-for="Employee.EmploymentType" class="form-label">Тип занятости</label>
+                                    <select asp-for="Employee.EmploymentType" class="form-select" required>
+                                        <option value="0">Полная занятость</option>
+                                        <option value="1">Частичная занятость</option>
+                                        <option value="2">Удаленная работа</option>
+                                    </select>
+                                    <span asp-validation-for="Employee.EmploymentType" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Примечания -->
+                        <div class="form-group mb-3">
+                            <label asp-for="Employee.Notes" class="form-label">Примечания</label>
+                            <textarea asp-for="Employee.Notes" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Employee.Notes" class="text-danger"></span>
+                        </div>
+
+                        <!-- Кнопка отправки формы -->
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Сохранить
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        // Валидация формы на стороне клиента
+        (function () {
+            'use strict'
+
+            var forms = document.querySelectorAll('.needs-validation')
+
+            Array.prototype.slice.call(forms)
+                .forEach(function (form) {
+                    form.addEventListener('submit', function (event) {
+                        if (!form.checkValidity()) {
+                            event.preventDefault()
+                            event.stopPropagation()
+                        }
+
+                        form.classList.add('was-validated')
+                    }, false)
+                })
+        })()
+    </script>
+}

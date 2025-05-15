@@ -30,7 +30,6 @@
     <Folder Include="Data\Migrations\" />
     <Folder Include="Data\Tests\" />
     <Folder Include="Migrations\Application\" />
-    <Folder Include="Pages\Employees\" />
   </ItemGroup>
 
 </Project>

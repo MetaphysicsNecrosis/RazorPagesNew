@@ -126,10 +126,10 @@ builder.Services.AddCors(options =>
 // Настройка Razor Pages
 builder.Services.AddRazorPages(options =>
 {
-    options.Conventions.AuthorizeFolder("/Admin", "RequireAdminRole");
+   /* options.Conventions.AuthorizeFolder("/Admin", "RequireAdminRole");
     options.Conventions.AuthorizeFolder("/HR", "RequireHRRole");
     options.Conventions.AuthorizeFolder("/Evaluations", "RequireEvaluatorRole");
-    options.Conventions.AuthorizePage("/Profile", "RequireUserRole");
+    options.Conventions.AuthorizePage("/Profile", "RequireUserRole");*/
 });
 /*.AddRazorRuntimeCompilation(); // Добавляем поддержку горячей перезагрузки для разработки*/
 

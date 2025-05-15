@@ -1,0 +1,319 @@
+﻿@page
+@model RazorPagesNew.Pages.Evaluations.CreateModel
+@{
+    ViewData["Title"] = "Создание новой оценки";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Создание новой оценки сотрудника</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="evaluationForm">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <input type="hidden" asp-for="Evaluation.Id" />
+                        <input type="hidden" asp-for="Evaluation.CreatedAt" />
+                        <input type="hidden" asp-for="Evaluation.SummaryId" />
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Evaluation.EmployeeId" class="form-label">Сотрудник</label>
+                                    <select asp-for="Evaluation.EmployeeId" class="form-select" asp-items="Model.EmployeeList">
+                                        <option value="">Выберите сотрудника</option>
+                                    </select>
+                                    <span asp-validation-for="Evaluation.EmployeeId" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Summary.PeriodStart" class="form-label">Начало периода оценки</label>
+                                    <input asp-for="Summary.PeriodStart" class="form-control" type="date" />
+                                    <span asp-validation-for="Summary.PeriodStart" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Summary.PeriodEnd" class="form-label">Конец периода оценки</label>
+                                    <input asp-for="Summary.PeriodEnd" class="form-control" type="date" />
+                                    <span asp-validation-for="Summary.PeriodEnd" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Evaluation.EvaluationDate" class="form-label">Дата проведения оценки</label>
+                                    <input asp-for="Evaluation.EvaluationDate" class="form-control" type="date" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" />
+                                    <span asp-validation-for="Evaluation.EvaluationDate" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Evaluation.Notes" class="form-label">Комментарий к оценке</label>
+                                    <textarea asp-for="Evaluation.Notes" class="form-control" rows="5"></textarea>
+                                    <span asp-validation-for="Evaluation.Notes" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h5 class="border-bottom pb-2 mb-3">Оценка по критериям</h5>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Критерий</th>
+                                                <th>Вес</th>
+                                                <th>Оценка (0-100)</th>
+                                                <th>Результат</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for (int i = 0; i < Model.CriteriaScores.Count; i++)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <input type="hidden" asp-for="CriteriaScores[i].CriterionId" />
+                                                        <input type="hidden" asp-for="CriteriaScores[i].CriterionName" />
+                                                        <input type="hidden" asp-for="CriteriaScores[i].Weight" />
+                                                        @Model.CriteriaScores[i].CriterionName
+                                                    </td>
+                                                    <td>@Model.CriteriaScores[i].Weight.ToString("P0")</td>
+                                                    <td>
+                                                        <input asp-for="CriteriaScores[i].Score" type="range" class="form-range score-slider"
+                                                               min="0" max="100" step="5" data-index="@i" />
+                                                        <div class="d-flex justify-content-between">
+                                                            <small>0</small>
+                                                            <small id="scoreValue_@i">@Model.CriteriaScores[i].Score</small>
+                                                            <small>100</small>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress">
+                                                            <div class="progress-bar progress-result" id="progressResult_@i"
+                                                                 role="progressbar"
+                                                                 style="width: @Model.CriteriaScores[i].Score%;"
+                                                                 aria-valuenow="@Model.CriteriaScores[i].Score"
+                                                                 aria-valuemin="0"
+                                                                 aria-valuemax="100">
+                                                                @(Model.CriteriaScores[i].Score)%
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                        <tfoot>
+                                            <tr class="table-secondary">
+                                                <th colspan="2">Итоговый результат:</th>
+                                                <th colspan="2">
+                                                    <div class="progress">
+                                                        <div class="progress-bar bg-success" id="totalProgressBar"
+                                                             role="progressbar"
+                                                             style="width: 0%;"
+                                                             aria-valuenow="0"
+                                                             aria-valuemin="0"
+                                                             aria-valuemax="100">
+                                                            0%
+                                                        </div>
+                                                    </div>
+                                                </th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" asp-for="Evaluation.Score" id="finalScore" value="0" />
+
+                        <div class="mt-4 d-flex justify-content-between">
+                            <a asp-page="./Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Назад к списку
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Сохранить оценку
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Секция для показа данных о сотруднике при выборе -->
+    <div class="row" id="employeeInfoSection" style="display: none;">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Информация о сотруднике</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="employeeInfoContent">
+                        <!-- AJAX-загружаемый контент сюда -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        $(document).ready(function () {
+            // Обработка изменений в слайдерах оценок
+            $('.score-slider').on('input', function () {
+                const index = $(this).data('index');
+                const value = $(this).val();
+
+                // Обновляем значение
+                $(`#scoreValue_${index}`).text(value);
+
+                // Обновляем прогресс-бар
+                $(`#progressResult_${index}`)
+                    .css('width', value + '%')
+                    .attr('aria-valuenow', value)
+                    .text(value + '%');
+
+                // Задаем цвет прогресс-бара в зависимости от значения
+                if (value >= 70) {
+                    $(`#progressResult_${index}`).removeClass('bg-warning bg-danger').addClass('bg-success');
+                } else if (value >= 50) {
+                    $(`#progressResult_${index}`).removeClass('bg-success bg-danger').addClass('bg-warning');
+                } else {
+                    $(`#progressResult_${index}`).removeClass('bg-success bg-warning').addClass('bg-danger');
+                }
+
+                // Пересчитываем итоговую оценку
+                calculateTotalScore();
+            });
+
+            // Инициализация начальных цветов прогресс-баров
+            $('.score-slider').each(function() {
+                const index = $(this).data('index');
+                const value = $(this).val();
+
+                if (value >= 70) {
+                    $(`#progressResult_${index}`).removeClass('bg-warning bg-danger').addClass('bg-success');
+                } else if (value >= 50) {
+                    $(`#progressResult_${index}`).removeClass('bg-success bg-danger').addClass('bg-warning');
+                } else {
+                    $(`#progressResult_${index}`).removeClass('bg-success bg-warning').addClass('bg-danger');
+                }
+            });
+
+            // Первоначальный расчет общей оценки
+            calculateTotalScore();
+
+            // Функция расчета общей оценки с учетом весов
+            function calculateTotalScore() {
+                let totalScore = 0;
+                let totalWeight = 0;
+
+                // Проходим по всем критериям
+                for (let i = 0; i < @Model.CriteriaScores.Count; i++) {
+                    const score = parseFloat($(`#CriteriaScores_${i}__Score`).val());
+                    const weight = parseFloat($(`#CriteriaScores_${i}__Weight`).val());
+
+                    totalScore += score * weight;
+                    totalWeight += weight;
+                }
+
+                // Вычисляем средневзвешенное значение
+                const finalScore = totalWeight > 0 ? Math.round(totalScore / totalWeight) : 0;
+
+                // Обновляем итоговый прогресс-бар
+                $('#totalProgressBar')
+                    .css('width', finalScore + '%')
+                    .attr('aria-valuenow', finalScore)
+                    .text(finalScore + '%');
+
+                // Обновляем скрытое поле с итоговой оценкой
+                $('#finalScore').val(finalScore);
+
+                // Задаем цвет итогового прогресс-бара
+                if (finalScore >= 70) {
+                    $('#totalProgressBar').removeClass('bg-warning bg-danger').addClass('bg-success');
+                } else if (finalScore >= 50) {
+                    $('#totalProgressBar').removeClass('bg-success bg-danger').addClass('bg-warning');
+                } else {
+                    $('#totalProgressBar').removeClass('bg-success bg-warning').addClass('bg-danger');
+                }
+            }
+
+            // Обработка изменения выбора сотрудника
+            $('#Evaluation_EmployeeId').change(function() {
+                const employeeId = $(this).val();
+
+                if (employeeId) {
+                    // AJAX-запрос для получения данных о сотруднике
+                    $.ajax({
+                        url: `/api/employees/${employeeId}`,
+                        method: 'GET',
+                        success: function(data) {
+                            // Формируем HTML для отображения информации о сотруднике
+                            const employeeHtml = `
+                                <div class="col-md-3 text-center">
+                                    ${data.photoPath
+                                        ? `<img src="${data.photoPath}" alt="${data.fullName}" class="img-fluid rounded-circle mb-3" style="max-width: 150px; height: auto;">`
+                                        : `<div class="bg-light rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 150px; height: 150px;">
+                                             <i class="fas fa-user fa-4x text-secondary"></i>
+                                           </div>`}
+                                    <h5>${data.fullName}</h5>
+                                    <p class="text-muted mb-0">${data.position}</p>
+                                    <p class="badge bg-primary">${data.departmentName}</p>
+                                </div>
+                                <div class="col-md-9">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <dl class="row">
+                                                <dt class="col-sm-4">Email:</dt>
+                                                <dd class="col-sm-8">${data.email}</dd>
+
+                                                <dt class="col-sm-4">Телефон:</dt>
+                                                <dd class="col-sm-8">${data.phone}</dd>
+
+                                                <dt class="col-sm-4">Дата приема:</dt>
+                                                <dd class="col-sm-8">${new Date(data.hireDate).toLocaleDateString()}</dd>
+                                            </dl>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <dl class="row">
+                                                <dt class="col-sm-6">Баланс отпуска:</dt>
+                                                <dd class="col-sm-6">${data.vacationBalance} дн.</dd>
+
+                                                <dt class="col-sm-6">Больничных:</dt>
+                                                <dd class="col-sm-6">${data.sickLeaveUsed} дн.</dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+
+                            // Вставляем HTML и показываем секцию
+                            $('#employeeInfoContent').html(employeeHtml);
+                            $('#employeeInfoSection').show();
+                        },
+                        error: function() {
+                            // Скрываем секцию в случае ошибки
+                            $('#employeeInfoSection').hide();
+                        }
+                    });
+                } else {
+                    // Скрываем секцию, если сотрудник не выбран
+                    $('#employeeInfoSection').hide();
+                }
+            });
+
+            // Автоматический выбор сотрудника при загрузке страницы, если он уже выбран
+            if ($('#Evaluation_EmployeeId').val()) {
+                $('#Evaluation_EmployeeId').trigger('change');
+            }
+        });
+    </script>
+}
