@@ -1,16 +1,16 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RazorPagesNew.Data;
 using RazorPagesNew.Models.Enums;
-using RazorPagesNew.Models.Evaluate;
+using RazorPagesNew.ModelsDb;
 using RazorPagesNew.Services.Interfaces;
 
 namespace RazorPagesNew.Services.Implementation
 {
     public class EvaluationService : IEvaluationService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly MyApplicationDbContext _context;
 
-        public EvaluationService(ApplicationDbContext context)
+        public EvaluationService(MyApplicationDbContext context)
         {
             _context = context;
         }
@@ -33,7 +33,7 @@ namespace RazorPagesNew.Services.Implementation
                 .Include(e => e.Employee)
                 .Include(e => e.Evaluator)
                 .Include(e => e.Summary)
-                .Include(e => e.Scores)
+                .Include(e => e.EvaluationScores)
                 .ThenInclude(s => s.Criterion)
                 .FirstOrDefaultAsync(e => e.Id == id);
         }
@@ -44,7 +44,7 @@ namespace RazorPagesNew.Services.Implementation
                 .Where(e => e.EmployeeId == employeeId)
                 .Include(e => e.Evaluator)
                 .Include(e => e.Summary)
-                .Include(e => e.Scores)
+                .Include(e => e.EvaluationScores)
                 .ThenInclude(s => s.Criterion)
                 .OrderByDescending(e => e.EvaluationDate)
                 .AsNoTracking()
@@ -68,7 +68,7 @@ namespace RazorPagesNew.Services.Implementation
                 throw new ArgumentNullException(nameof(evaluation));
 
             var existingEvaluation = await _context.EmployeeEvaluations
-                .Include(e => e.Scores)
+                .Include(e => e.EvaluationScores)
                 .FirstOrDefaultAsync(e => e.Id == evaluation.Id);
 
             if (existingEvaluation == null)
@@ -77,9 +77,9 @@ namespace RazorPagesNew.Services.Implementation
             _context.Entry(existingEvaluation).CurrentValues.SetValues(evaluation);
 
             // Обновляем связанные оценки по критериям
-            foreach (var score in evaluation.Scores)
+            foreach (var score in evaluation.EvaluationScores)
             {
-                var existingScore = existingEvaluation.Scores
+                var existingScore = existingEvaluation.EvaluationScores
                     .FirstOrDefault(s => s.Id == score.Id);
 
                 if (existingScore != null)
@@ -88,14 +88,14 @@ namespace RazorPagesNew.Services.Implementation
                 }
                 else
                 {
-                    existingEvaluation.Scores.Add(score);
+                    existingEvaluation.EvaluationScores.Add(score);
                 }
             }
 
             // Удаляем оценки, которых нет в обновлённом списке
-            foreach (var existingScore in existingEvaluation.Scores.ToList())
+            foreach (var existingScore in existingEvaluation.EvaluationScores.ToList())
             {
-                if (!evaluation.Scores.Any(s => s.Id == existingScore.Id))
+                if (!evaluation.EvaluationScores.Any(s => s.Id == existingScore.Id))
                 {
                     _context.EvaluationScores.Remove(existingScore);
                 }
@@ -332,8 +332,8 @@ namespace RazorPagesNew.Services.Implementation
 
                 // Рассчитываем отпуска
                 TotalLeaveDays = leaveRecords.Sum(l => l.DayCount),
-                SickDays = leaveRecords.Where(l => l.Type == LeaveType.SickLeave).Sum(l => l.DayCount),
-                VacationDays = leaveRecords.Where(l => l.Type == LeaveType.Vacation).Sum(l => l.DayCount),
+                SickDays = leaveRecords.Where(l => l.Type == (int)LeaveType.SickLeave).Sum(l => l.DayCount),
+                VacationDays = leaveRecords.Where(l => l.Type == ((int)LeaveType.Vacation)).Sum(l => l.DayCount),
 
                 // Рассчитываем задачи
                 CompletedTasks = taskRecords.Count,

@@ -1,5 +1,5 @@
 ﻿using RazorPagesNew.Models.Enums;
-using RazorPagesNew.Models;
+using RazorPagesNew.ModelsDb;
 
 namespace RazorPagesNew.Services.Interfaces
 {

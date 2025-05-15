@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using RazorPagesNew.Data;
+using RazorPagesNew.ModelsDb;
 using RazorPagesNew.Services.Implementation;
 using RazorPagesNew.Services.Interfaces;
 using System.Text;
@@ -14,7 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
 // Настройка контекста базы данных
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContext<MyApplicationDbContext>(options =>
     options.UseSqlServer(
         configuration.GetConnectionString("DefaultConnection"),
         sqlOptions => sqlOptions.EnableRetryOnFailure()
@@ -188,7 +189,7 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     try
     {
-        var dbContext = services.GetRequiredService<ApplicationDbContext>();
+        var dbContext = services.GetRequiredService<MyApplicationDbContext>();
         dbContext.Database.Migrate();
         DbInitializer.Initialize(dbContext);
 
@@ -212,7 +213,7 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     try
     {
-        var dbContext = services.GetRequiredService<ApplicationDbContext>();
+        var dbContext = services.GetRequiredService<MyApplicationDbContext>();
         DbInitializer.Initialize(dbContext);
     }
     catch (Exception ex)

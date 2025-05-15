@@ -1,22 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using RazorPagesNew.Data;
-using RazorPagesNew.Models.Evaluate;
-using RazorPagesNew.Models;
 using RazorPagesNew.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using RazorPagesNew.ModelsDb;
 
 namespace RazorPagesNew.Pages.Dashboard
 {
     public class IndexModel : PageModel
     {
-        private readonly ApplicationDbContext _context;
+        private readonly MyApplicationDbContext _context;
         private readonly IEmployeeService _employeeService;
         private readonly IEvaluationService _evaluationService;
         private readonly IUserService _userService;
 
         public IndexModel(
-            ApplicationDbContext context,
+            MyApplicationDbContext context,
             IEmployeeService employeeService,
             IEvaluationService evaluationService,
             IUserService userService)
@@ -90,8 +89,8 @@ namespace RazorPagesNew.Pages.Dashboard
             // Получаем данные о лучших сотрудниках по среднему значению оценок
             var employees = await _context.Employees
                 .Include(e => e.Department)
-                .Include(e => e.Evaluations)
-                .Include(e => e.Tasks)
+                .Include(e => e.EmployeeEvaluations)
+                .Include(e => e.TaskRecords)
                 .ToListAsync();
 
             TopEmployees = employees
@@ -100,9 +99,9 @@ namespace RazorPagesNew.Pages.Dashboard
                     Id = e.Id,
                     FullName = e.FullName,
                     Department = e.Department,
-                    Score = e.Evaluations.Any() ? e.Evaluations.Average(ev => ev.Score) : 0,
-                    Efficiency = e.Tasks.Any(t => t.EfficiencyScore.HasValue)
-                        ? e.Tasks.Where(t => t.EfficiencyScore.HasValue).Average(t => t.EfficiencyScore.Value) / 100
+                    Score = e.EmployeeEvaluations.Any() ? e.EmployeeEvaluations.Average(ev => ev.Score) : 0,
+                    Efficiency = e.TaskRecords.Any(t => t.EfficiencyScore.HasValue)
+                        ? e.TaskRecords.Where(t => t.EfficiencyScore.HasValue).Average(t => t.EfficiencyScore.Value) / 100
                         : 0
                 })
                 .OrderByDescending(e => e.Score)
@@ -115,7 +114,7 @@ namespace RazorPagesNew.Pages.Dashboard
             // Получаем данные о производительности по отделам
             var departments = await _context.Departments
                 .Include(d => d.Employees)
-                .ThenInclude(e => e.Evaluations)
+                .ThenInclude(e => e.EmployeeEvaluations)
                 .ToListAsync();
 
             DepartmentPerformance = departments
@@ -123,8 +122,8 @@ namespace RazorPagesNew.Pages.Dashboard
                 {
                     Name = d.Name,
                     EmployeeCount = d.Employees.Count,
-                    AverageScore = d.Employees.SelectMany(e => e.Evaluations).Any()
-                        ? d.Employees.SelectMany(e => e.Evaluations).Average(e => e.Score)
+                    AverageScore = d.Employees.SelectMany(e => e.EmployeeEvaluations).Any()
+                        ? d.Employees.SelectMany(e => e.EmployeeEvaluations).Average(e => e.Score)
                         : 0
                 })
                 .OrderByDescending(d => d.AverageScore)

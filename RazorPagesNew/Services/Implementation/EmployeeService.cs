@@ -1,16 +1,16 @@
 ﻿using RazorPagesNew.Data;
-using RazorPagesNew.Models.Activity;
-using RazorPagesNew.Models;
+
 using RazorPagesNew.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using RazorPagesNew.ModelsDb;
 
 namespace RazorPagesNew.Services.Implementation
 {
     public class EmployeeService : IEmployeeService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly MyApplicationDbContext _context;
 
-        public EmployeeService(ApplicationDbContext context)
+        public EmployeeService(MyApplicationDbContext context)
         {
             _context = context;
         }
@@ -29,7 +29,7 @@ namespace RazorPagesNew.Services.Implementation
         {
             return await _context.Employees
                 .Include(e => e.Department)
-                .Include(e => e.User)
+                .Include(e => e.Users)
                 .FirstOrDefaultAsync(e => e.Id == id);
         }
 

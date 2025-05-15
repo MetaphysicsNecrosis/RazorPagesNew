@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RazorPagesNew.Models.Enums;
-using RazorPagesNew.Models.Evaluate;
-using RazorPagesNew.Models;
+using RazorPagesNew.ModelsDb;
 
 namespace RazorPagesNew.Data
 {
@@ -10,7 +9,7 @@ namespace RazorPagesNew.Data
     /// </summary>
     public static class DbInitializer
     {
-        public static void Initialize(ApplicationDbContext context)
+        public static void Initialize(MyApplicationDbContext context)
         {
             // Проверяем, нужно ли создавать миграции
             context.Database.Migrate();
@@ -74,7 +73,7 @@ namespace RazorPagesNew.Data
             var auditLog = new AuditLog
             {
                 Username = "system",
-                ActionType = ActionType.Create,
+                ActionType = ((int)ActionType.Create),
                 EntityName = "System",
                 EntityId = "0",
                 Details = "Система инициализирована с начальными данными"

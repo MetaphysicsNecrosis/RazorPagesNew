@@ -1,4 +1,4 @@
-﻿using RazorPagesNew.Models;
+﻿using RazorPagesNew.ModelsDb;
 using System.Security.Claims;
 
 namespace RazorPagesNew.Services.Interfaces

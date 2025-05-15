@@ -1,6 +1,6 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using RazorPagesNew.Data;
-using RazorPagesNew.Models;
+using RazorPagesNew.ModelsDb;
 using RazorPagesNew.Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -12,9 +12,9 @@ namespace RazorPagesNew.Services.Implementation
     public class TokenService : ITokenService
     {
         private readonly IConfiguration _configuration;
-        private readonly ApplicationDbContext _context;
+        private readonly MyApplicationDbContext _context;
 
-        public TokenService(IConfiguration configuration, ApplicationDbContext context)
+        public TokenService(IConfiguration configuration, MyApplicationDbContext context)
         {
             _configuration = configuration;
             _context = context;

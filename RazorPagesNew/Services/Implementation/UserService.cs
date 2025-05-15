@@ -1,18 +1,18 @@
 ﻿using RazorPagesNew.Data;
 using RazorPagesNew.Models.Enums;
-using RazorPagesNew.Models;
 using RazorPagesNew.Services.Interfaces;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using RazorPagesNew.ModelsDb;
 
 namespace RazorPagesNew.Services.Implementation
 {
     public class UserService : IUserService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly MyApplicationDbContext _context;
         private readonly IAuditLogService _auditLogService;
 
-        public UserService(ApplicationDbContext context, IAuditLogService auditLogService)
+        public UserService(MyApplicationDbContext context, IAuditLogService auditLogService)
         {
             _context = context;
             _auditLogService = auditLogService;
@@ -144,7 +144,7 @@ namespace RazorPagesNew.Services.Implementation
             if (string.IsNullOrEmpty(userId))
                 return null;
 
-            return await GetByIdAsync(int.Parse(userId));
+            return await GetByIdAsync(userId);
         }
     }
 }

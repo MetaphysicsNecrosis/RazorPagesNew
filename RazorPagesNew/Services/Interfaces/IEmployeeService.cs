@@ -1,5 +1,4 @@
-﻿using RazorPagesNew.Models.Activity;
-using RazorPagesNew.Models;
+﻿using RazorPagesNew.ModelsDb;
 
 namespace RazorPagesNew.Services.Interfaces
 {

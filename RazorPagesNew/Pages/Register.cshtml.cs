@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using RazorPagesNew.Data;
-using RazorPagesNew.Models;
+using RazorPagesNew.ModelsDb;
 using RazorPagesNew.Services.Interfaces;
 using System.ComponentModel.DataAnnotations;
 

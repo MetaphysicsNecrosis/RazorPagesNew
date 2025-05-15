@@ -1,17 +1,18 @@
 ﻿using RazorPagesNew.Data;
-using RazorPagesNew.Models.Enums;
-using RazorPagesNew.Models;
+
 using RazorPagesNew.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using RazorPagesNew.ModelsDb;
+using RazorPagesNew.Models.Enums;
 
 namespace RazorPagesNew.Services.Implementation
 {
     public class AuditLogService : IAuditLogService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly MyApplicationDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public AuditLogService(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
+        public AuditLogService(MyApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
             _httpContextAccessor = httpContextAccessor;
@@ -25,7 +26,7 @@ namespace RazorPagesNew.Services.Implementation
             var log = new AuditLog
             {
                 Username = username,
-                ActionType = actionType,
+                ActionType = ((int)actionType),
                 EntityName = entityName,
                 EntityId = entityId,
                 Details = details

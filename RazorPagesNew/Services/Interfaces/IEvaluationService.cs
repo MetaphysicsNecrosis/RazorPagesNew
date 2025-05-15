@@ -1,4 +1,4 @@
-﻿using RazorPagesNew.Models.Evaluate;
+﻿using RazorPagesNew.ModelsDb;
 
 namespace RazorPagesNew.Services.Interfaces
 {
