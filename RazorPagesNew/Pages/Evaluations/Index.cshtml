@@ -1,0 +1,308 @@
+﻿@page
+@model RazorPagesNew.Pages.Evaluations.IndexModel
+@{
+    ViewData["Title"] = "Оценки сотрудников";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Оценки сотрудников</h5>
+                    <div>
+                        <a asp-page="./Create" class="btn btn-light btn-sm">
+                            <i class="fas fa-plus me-1"></i> Новая оценка
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="mb-4">
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <label for="departmentId" class="form-label">Отдел</label>
+                                <select class="form-select" id="departmentId" name="departmentId" asp-items="Model.DepartmentList">
+                                    <option value="">Все отделы</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="evaluatorId" class="form-label">Оценивающий</label>
+                                <select class="form-select" id="evaluatorId" name="evaluatorId" asp-items="Model.EvaluatorList">
+                                    <option value="">Все оценивающие</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="startDate" class="form-label">Дата начала</label>
+                                <input type="date" class="form-control" id="startDate" name="startDate" value="@Model.StartDate?.ToString("yyyy-MM-dd")">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="endDate" class="form-label">Дата окончания</label>
+                                <input type="date" class="form-control" id="endDate" name="endDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-filter me-1"></i> Фильтровать
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    @if (Model.Evaluations.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Сотрудник</th>
+                                        <th>Отдел</th>
+                                        <th>Дата оценки</th>
+                                        <th>Оценка</th>
+                                        <th>Оценил</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var evaluation in Model.Evaluations)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a asp-page="/Employees/Details" asp-route-id="@evaluation.EmployeeId">
+                                                    @evaluation.Employee.FullName
+                                                </a>
+                                            </td>
+                                            <td>@evaluation.Employee.Department.Name</td>
+                                            <td>@evaluation.EvaluationDate.ToShortDateString()</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="me-2">@evaluation.Score.ToString("F1")</span>
+                                                    <div class="progress flex-grow-1" style="height: 8px;">
+                                                        <div class="progress-bar @(evaluation.Score >= 70 ? "bg-success" : (evaluation.Score >= 50 ? "bg-warning" : "bg-danger"))"
+                                                             role="progressbar"
+                                                             style="width: @(evaluation.Score)%"
+                                                             aria-valuenow="@(evaluation.Score)"
+                                                             aria-valuemin="0"
+                                                             aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>@evaluation.Evaluator.Username</td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a asp-page="./Details" asp-route-id="@evaluation.Id" class="btn btn-outline-primary">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a asp-page="./Edit" asp-route-id="@evaluation.Id" class="btn btn-outline-secondary">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-outline-danger delete-evaluation"
+                                                            data-id="@evaluation.Id"
+                                                            data-employee="@evaluation.Employee.FullName">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Пагинация -->
+                        @if (Model.TotalPages > 1)
+                        {
+                            <nav aria-label="Page navigation" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    @if (Model.CurrentPage > 1)
+                                    {
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Model.GetPageUrl(1)" aria-label="First">
+                                                <span aria-hidden="true">&laquo;&laquo;</span>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Model.GetPageUrl(Model.CurrentPage - 1)" aria-label="Previous">
+                                                <span aria-hidden="true">&laquo;</span>
+                                            </a>
+                                        </li>
+                                    }
+
+                                    @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
+                                    {
+                                        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                            <a class="page-link" href="@Model.GetPageUrl(i)">@i</a>
+                                        </li>
+                                    }
+
+                                    @if (Model.CurrentPage < Model.TotalPages)
+                                    {
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Model.GetPageUrl(Model.CurrentPage + 1)" aria-label="Next">
+                                                <span aria-hidden="true">&raquo;</span>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Model.GetPageUrl(Model.TotalPages)" aria-label="Last">
+                                                <span aria-hidden="true">&raquo;&raquo;</span>
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </nav>
+                        }
+
+                        <!-- Статистика -->
+                        <div class="alert alert-light mt-4">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <h5>@Model.Evaluations.Count()</h5>
+                                    <small class="text-muted">оценок отображено</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <h5>@Model.TotalEvaluations</h5>
+                                    <small class="text-muted">всего оценок</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <h5>@Model.AverageScore.ToString("F1")</h5>
+                                    <small class="text-muted">средняя оценка</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <h5>@Model.LatestEvaluationDate?.ToShortDateString()</h5>
+                                    <small class="text-muted">последняя оценка</small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> Оценки не найдены. Попробуйте изменить параметры фильтрации или
+                            <a asp-page="./Create" class="alert-link">создать новую оценку</a>.
+                        </div>
+                    }
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a asp-page="/Dashboard/Index" class="btn btn-outline-secondary">
+                            <i class="fas fa-home me-1"></i> На дашборд
+                        </a>
+                        <a asp-page="./Create" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i> Новая оценка
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- График распределения оценок по отделам -->
+    @if (Model.Evaluations.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Анализ оценок по отделам</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="departmentChart" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Модальное окно подтверждения удаления -->
+<div class="modal fade" id="deleteEvaluationModal" tabindex="-1" aria-labelledby="deleteEvaluationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Delete">
+                <input type="hidden" id="deleteEvaluationId" name="id" />
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteEvaluationModalLabel">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Вы уверены, что хотите удалить оценку сотрудника <strong id="deleteEmployeeName"></strong>?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Внимание!</strong> Это действие нельзя будет отменить. Вместе с оценкой будут удалены все
+                        связанные данные об оценках по критериям.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Удалить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Обработка клика по кнопке удаления
+            $('.delete-evaluation').click(function() {
+                const id = $(this).data('id');
+                const employee = $(this).data('employee');
+
+                $('#deleteEvaluationId').val(id);
+                $('#deleteEmployeeName').text(employee);
+
+                $('#deleteEvaluationModal').modal('show');
+            });
+
+            // Инициализация графика распределения оценок по отделам
+        @if (Model.Evaluations.Any())
+        {
+            <text>
+                    const ctx = document.getElementById('departmentChart').getContext('2d');
+                    const departmentData = @Html.Raw(Json.Serialize(Model.DepartmentChartData1));
+
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: departmentData.labels,
+                            datasets: [
+                                {
+                                    label: 'Средняя оценка',
+                                    data: departmentData.averages,
+                                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    borderWidth: 1
+                                },
+                                {
+                                    label: 'Максимальная оценка',
+                                    data: departmentData.maximums,
+                                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    borderWidth: 1
+                                },
+                                {
+                                    label: 'Минимальная оценка',
+                                    data: departmentData.minimums,
+                                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                                    borderColor: 'rgba(255, 99, 132, 1)',
+                                    borderWidth: 1
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100
+                                }
+                            }
+                        }
+                    });
+            </text>
+        }
+        });
+    </script>
+}

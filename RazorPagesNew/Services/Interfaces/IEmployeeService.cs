@@ -28,5 +28,7 @@ namespace RazorPagesNew.Services.Interfaces
         // Операции по управлению учетными записями сотрудников
         Task<bool> LinkEmployeeToUserAsync(int employeeId, int userId);
         Task<bool> UnlinkEmployeeFromUserAsync(int employeeId);
+
+        Task<List<Department>> GetAllDepartmentsAsync();
     }
 }

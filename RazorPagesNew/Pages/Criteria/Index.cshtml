@@ -1,0 +1,345 @@
+﻿@page
+@model RazorPagesNew.Pages.Criteria.IndexModel
+@{
+    ViewData["Title"] = "Критерии оценки сотрудников";
+
+    string GetRandomBootstrapColor()
+    {
+        string[] colors = new[] { "bg-primary", "bg-success", "bg-info", "bg-warning", "bg-danger", "bg-secondary" };
+        Random random = new Random();
+        return colors[random.Next(colors.Length)];
+    }
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Критерии оценки сотрудников</h5>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#createCriterionModal">
+                        <i class="fas fa-plus me-1"></i> Новый критерий
+                    </button>
+                </div>
+                <div class="card-body">
+                    <p class="mb-4">
+                        Система оценки персонала основана на наборе взвешенных критериев.
+                        Каждый критерий имеет свой вес в общей оценке сотрудника.
+                    </p>
+
+                    @if (Model.Criteria.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Критерий</th>
+                                        <th>Вес</th>
+                                        <th>Создан</th>
+                                        <th>Обновлен</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var criterion in Model.Criteria)
+                                    {
+                                        <tr>
+                                            <td>@criterion.Name</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="me-2">@criterion.Weight.ToString("P0")</span>
+                                                    <div class="progress flex-grow-1" style="height: 8px;">
+                                                        <div class="progress-bar bg-info"
+                                                             role="progressbar"
+                                                             style="width: @(criterion.Weight * 100)%"
+                                                             aria-valuenow="@(criterion.Weight * 100)"
+                                                             aria-valuemin="0"
+                                                             aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>@criterion.CreatedAt.ToShortDateString()</td>
+                                            <td>
+                                                @if (criterion.UpdatedAt.HasValue)
+                                                {
+                                                    @criterion.UpdatedAt.Value.ToShortDateString()
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button type="button" class="btn btn-outline-primary edit-criterion"
+                                                            data-id="@criterion.Id"
+                                                            data-name="@criterion.Name"
+                                                            data-weight="@criterion.Weight">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-danger delete-criterion"
+                                                            data-id="@criterion.Id"
+                                                            data-name="@criterion.Name">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-4">
+                            <h5 class="mb-3">Распределение весов критериев</h5>
+                            <div class="progress" style="height: 24px;">
+                                @{
+                                    double totalWeight = 0;
+                                }
+                                @foreach (var criterion in Model.Criteria)
+                                {
+                                    string color = GetRandomBootstrapColor();
+                                    double percentage = criterion.Weight * 100;
+                                    totalWeight += criterion.Weight;
+                                    <div class="progress-bar @color" role="progressbar"
+                                         style="width: @percentage%"
+                                         aria-valuenow="@percentage"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100"
+                                         data-bs-toggle="tooltip"
+                                         title="@criterion.Name: @percentage.ToString("F1")%">
+                                        @criterion.Name
+                                    </div>
+                                }
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <small class="text-muted">Общий вес критериев: @totalWeight.ToString("P0")</small>
+                                <small class="text-@(Math.Abs(totalWeight - 1.0) < 0.01 ? "success" : "danger")">
+                                    @if (Math.Abs(totalWeight - 1.0) < 0.01)
+                                    {
+                                        <i class="fas fa-check-circle me-1"></i>
+                                        <div>Весовые коэффициенты сбалансированы</div>
+                                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        <div>Сумма весов должна быть равна 100 %</div>
+                                                    }
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <h5 class="mb-3">Рекомендации по балансировке критериев</h5>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Важно:</strong> Сумма весов всех критериев должна быть равна 100% (1.0).
+                                Это обеспечит корректный расчет общего балла в оценке сотрудника.
+                                Текущая сумма: <strong>@totalWeight.ToString("P0")</strong>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Рекомендуемые значения весов:</h6>
+                                            <ul>
+                                                <li>Ключевые показатели: 0.2 - 0.3 (20-30%)</li>
+                                                <li>Важные показатели: 0.1 - 0.2 (10-20%)</li>
+                                                <li>Второстепенные показатели: 0.05 - 0.1 (5-10%)</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Примеры критериев для банковских сотрудников:</h6>
+                                            <ul>
+                                                <li>Выполнение плана продаж</li>
+                                                <li>Качество обслуживания клиентов</li>
+                                                <li>Скорость обработки заявок</li>
+                                                <li>Соблюдение регламентов и процедур</li>
+                                                <li>Командное взаимодействие</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-circle me-2"></i> В системе пока не добавлены критерии оценки.
+                            Создайте первый критерий, чтобы начать настройку системы оценки персонала.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для создания нового критерия -->
+<div class="modal fade" id="createCriterionModal" tabindex="-1" aria-labelledby="createCriterionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Create">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="createCriterionModalLabel">Новый критерий оценки</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="criterionName" class="form-label">Название критерия</label>
+                        <input type="text" class="form-control" id="criterionName" name="Name" required
+                               placeholder="Например: Качество обслуживания клиентов">
+                    </div>
+                    <div class="mb-3">
+                        <label for="criterionWeight" class="form-label">Вес (от 0 до 1)</label>
+                        <input type="range" class="form-range" id="criterionWeight" name="Weight"
+                               min="0" max="1" step="0.05" value="0.1">
+                        <div class="d-flex justify-content-between">
+                            <small>0</small>
+                            <small id="weightValue">0.10 (10%)</small>
+                            <small>1</small>
+                        </div>
+                    </div>
+                    <div class="alert alert-secondary">
+                        <small>
+                            <i class="fas fa-info-circle me-1"></i>
+                            Вес определяет значимость данного критерия в общей оценке сотрудника.
+                            Сумма весов всех критериев должна быть равна 1 (100%).
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для редактирования критерия -->
+<div class="modal fade" id="editCriterionModal" tabindex="-1" aria-labelledby="editCriterionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Edit">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editCriterionModalLabel">Редактирование критерия</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editCriterionId" name="Id">
+                    <div class="mb-3">
+                        <label for="editCriterionName" class="form-label">Название критерия</label>
+                        <input type="text" class="form-control" id="editCriterionName" name="Name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCriterionWeight" class="form-label">Вес (от 0 до 1)</label>
+                        <input type="range" class="form-range" id="editCriterionWeight" name="Weight"
+                               min="0" max="1" step="0.05" value="0.1">
+                        <div class="d-flex justify-content-between">
+                            <small>0</small>
+                            <small id="editWeightValue">0.10 (10%)</small>
+                            <small>1</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Сохранить изменения
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для подтверждения удаления -->
+<div class="modal fade" id="deleteCriterionModal" tabindex="-1" aria-labelledby="deleteCriterionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Delete">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteCriterionModalLabel">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="deleteCriterionId" name="Id">
+                    <p>Вы уверены, что хотите удалить критерий <strong id="deleteCriterionName"></strong>?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Внимание!</strong> Это действие может повлиять на существующие оценки сотрудников.
+                        Рекомендуется удалять критерии только в случае крайней необходимости.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Удалить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Инициализация тултипов
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+
+            // Обработка изменения слайдера веса при создании
+            $('#criterionWeight').on('input', function() {
+                var value = $(this).val();
+                var percent = (value * 100).toFixed(0);
+                $('#weightValue').text(value + ' (' + percent + '%)');
+            });
+
+            // Обработка изменения слайдера веса при редактировании
+            $('#editCriterionWeight').on('input', function() {
+                var value = $(this).val();
+                var percent = (value * 100).toFixed(0);
+                $('#editWeightValue').text(value + ' (' + percent + '%)');
+            });
+
+            // Обработка клика по кнопке редактирования
+            $('.edit-criterion').click(function() {
+                var id = $(this).data('id');
+                var name = $(this).data('name');
+                var weight = $(this).data('weight');
+
+                $('#editCriterionId').val(id);
+                $('#editCriterionName').val(name);
+                $('#editCriterionWeight').val(weight);
+
+                var percent = (weight * 100).toFixed(0);
+                $('#editWeightValue').text(weight + ' (' + percent + '%)');
+
+                $('#editCriterionModal').modal('show');
+            });
+
+            // Обработка клика по кнопке удаления
+            $('.delete-criterion').click(function() {
+                var id = $(this).data('id');
+                var name = $(this).data('name');
+
+                $('#deleteCriterionId').val(id);
+                $('#deleteCriterionName').text(name);
+
+                $('#deleteCriterionModal').modal('show');
+            });
+        });
+    </script>
+}

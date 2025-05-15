@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using RazorPagesNew.Data;
 using RazorPagesNew.ModelsDb;
+using RazorPagesNew.Services.Background;
 using RazorPagesNew.Services.Implementation;
 using RazorPagesNew.Services.Interfaces;
 using System.Text;
@@ -96,6 +97,15 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
+
+// Регистрация сервисов синхронизации ролей
+builder.Services.AddScoped<IRoleSynchronizationService, RoleSynchronizationService>();
+
+// Регистрация Identity-ориентированного сервиса пользователей вместо обычного
+builder.Services.AddScoped<IUserService, IdentityUserService>();
+// Регистрация фоновой службы синхронизации ролей
+builder.Services.AddHostedService<RoleSynchronizationBackgroundService>();
+
 
 // Регистрация сервисов
 builder.Services.AddScoped<IUserService, UserService>();

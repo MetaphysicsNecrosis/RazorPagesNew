@@ -4,6 +4,7 @@ using RazorPagesNew.Services.Interfaces;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using RazorPagesNew.ModelsDb;
+using Microsoft.AspNetCore.Identity;
 
 namespace RazorPagesNew.Services.Implementation
 {
@@ -11,6 +12,7 @@ namespace RazorPagesNew.Services.Implementation
     {
         private readonly MyApplicationDbContext _context;
         private readonly IAuditLogService _auditLogService;
+        private readonly UserManager<IdentityUser> _identityUserManager;
 
         public UserService(MyApplicationDbContext context, IAuditLogService auditLogService)
         {
@@ -121,7 +123,16 @@ namespace RazorPagesNew.Services.Implementation
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
-            return user != null && user.Role.Name == roleName;
+            if (user == null || string.IsNullOrEmpty(user.IdentityUserId))
+                return false;
+
+            // Получаем пользователя Identity
+            var identityUser = await _identityUserManager.FindByIdAsync(user.IdentityUserId);
+            if (identityUser == null)
+                return false;
+
+            // Проверяем наличие роли в Identity
+            return await _identityUserManager.IsInRoleAsync(identityUser, roleName);
         }
 
         /// <summary>
@@ -145,6 +156,25 @@ namespace RazorPagesNew.Services.Implementation
                 return null;
 
             return await GetByIdAsync(userId);
+        }
+        public async Task<List<User>> GetAllUsersAsync() 
+        {
+            return await _context.Users.ToListAsync();
+        }
+
+        Task<IEnumerable<User>> IUserService.GetAllUsersAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> AddUserToRoleAsync(int userId, string roleName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> RemoveUserFromRoleAsync(int userId, string roleName)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -231,5 +231,10 @@ namespace RazorPagesNew.Services.Implementation
         }
 
         #endregion
+
+        public async Task<List<Department>> GetAllDepartmentsAsync() 
+        {
+            return await _context.Departments.ToListAsync();
+        }
     }
 }

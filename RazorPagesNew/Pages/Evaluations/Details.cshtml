@@ -1,0 +1,348 @@
+﻿@page "{id:int}"
+@model RazorPagesNew.Pages.Evaluations.DetailsModel
+@{
+    ViewData["Title"] = "Детали оценки";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Детальная информация об оценке сотрудника</h5>
+                    <div>
+                        <a asp-page="./Edit" asp-route-id="@Model.Evaluation.Id" class="btn btn-light btn-sm me-2">
+                            <i class="fas fa-edit"></i> Редактировать
+                        </a>
+                        <a asp-page="./Index" class="btn btn-light btn-sm">
+                            <i class="fas fa-arrow-left"></i> Назад к списку
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Информация о сотруднике</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-center mb-3">
+                                        @if (!string.IsNullOrEmpty(Model.Evaluation.Employee.PhotoPath))
+                                        {
+                                            <img src="@Model.Evaluation.Employee.PhotoPath" alt="@Model.Evaluation.Employee.FullName"
+                                                 class="img-fluid rounded-circle mb-2" style="max-width: 100px; height: auto;">
+                                        }
+                                        else
+                                        {
+                                            <div class="bg-light rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center"
+                                                 style="width: 100px; height: 100px;">
+                                                <i class="fas fa-user fa-3x text-secondary"></i>
+                                            </div>
+                                        }
+                                        <h5>@Model.Evaluation.Employee.FullName</h5>
+                                        <p class="text-muted mb-0">@Model.Evaluation.Employee.Position</p>
+                                        <span class="badge bg-primary mt-1">@Model.Evaluation.Employee.Department.Name</span>
+                                    </div>
+
+                                    <dl class="row mt-3 mb-0">
+                                        <dt class="col-sm-5">Email:</dt>
+                                        <dd class="col-sm-7"><a href="mailto:@Model.Evaluation.Employee.Email">@Model.Evaluation.Employee.Email</a></dd>
+
+                                        <dt class="col-sm-5">Телефон:</dt>
+                                        <dd class="col-sm-7"><a href="tel:@Model.Evaluation.Employee.Phone">@Model.Evaluation.Employee.Phone</a></dd>
+
+                                        <dt class="col-sm-5">В компании:</dt>
+                                        <dd class="col-sm-7">
+                                            @{
+                                                var workDuration = (DateTime.UtcNow - Model.Evaluation.Employee.HireDate).TotalDays;
+                                                var years = Math.Floor(workDuration / 365);
+                                                var months = Math.Floor((workDuration % 365) / 30);
+                                            }
+                                            @(years > 0 ? $"{years} г. " : "")@(months > 0 ? $"{months} мес." : "< 1 мес.")
+                                        </dd>
+                                    </dl>
+                                </div>
+                                <div class="card-footer bg-white text-center">
+                                    <a asp-page="/Employees/Details" asp-route-id="@Model.Evaluation.EmployeeId" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-user me-1"></i> Профиль сотрудника
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Детали оценки</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-center mb-4">
+                                        <div class="display-4 mb-0 @(Model.Evaluation.Score >= 70 ? "text-success" : (Model.Evaluation.Score >= 50 ? "text-warning" : "text-danger"))">
+                                            @Model.Evaluation.Score.ToString("F1")
+                                        </div>
+                                        <div class="progress mt-2" style="height: 10px;">
+                                            <div class="progress-bar @(Model.Evaluation.Score >= 70 ? "bg-success" : (Model.Evaluation.Score >= 50 ? "bg-warning" : "bg-danger"))"
+                                                 role="progressbar"
+                                                 style="width: @(Model.Evaluation.Score)%"
+                                                 aria-valuenow="@(Model.Evaluation.Score)"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100"></div>
+                                        </div>
+                                        <p class="text-muted small mt-2">
+                                            Итоговый балл (@(Model.GetScoreDescription(Model.Evaluation.Score)))
+                                        </p>
+                                    </div>
+
+                                    <dl class="row mb-0">
+                                        <dt class="col-sm-5">Дата оценки:</dt>
+                                        <dd class="col-sm-7">@Model.Evaluation.EvaluationDate.ToShortDateString()</dd>
+
+                                        <dt class="col-sm-5">Оценил:</dt>
+                                        <dd class="col-sm-7">@Model.Evaluation.Evaluator.Username</dd>
+
+                                        <dt class="col-sm-5">Период:</dt>
+                                        <dd class="col-sm-7">@Model.Evaluation.Summary.PeriodStart.ToShortDateString() - @Model.Evaluation.Summary.PeriodEnd.ToShortDateString()</dd>
+
+                                        <dt class="col-sm-5">Создана:</dt>
+                                        <dd class="col-sm-7">@Model.Evaluation.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd>
+
+                                        @if (Model.Evaluation.UpdatedAt.HasValue)
+                                        {
+                                            <dt class="col-sm-5">Обновлена:</dt>
+                                            <dd class="col-sm-7">@Model.Evaluation.UpdatedAt.Value.ToString("dd.MM.yyyy HH:mm")</dd>
+                                        }
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Сводка активности</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-4">
+                                        <div class="col-6 text-center">
+                                            <div class="h3">@Model.Evaluation.Summary.AttendanceDays</div>
+                                            <div class="text-muted small">дней присутствия</div>
+                                        </div>
+                                        <div class="col-6 text-center">
+                                            <div class="h3">@Model.Evaluation.Summary.CompletedTasks</div>
+                                            <div class="text-muted small">выполнено задач</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-6 text-center">
+                                            <div class="h4">@Model.Evaluation.Summary.TotalHoursWorked.ToString("F1")</div>
+                                            <div class="text-muted small">рабочих часов</div>
+                                        </div>
+                                        <div class="col-6 text-center">
+                                            <div class="h4">@Model.Evaluation.Summary.AvgTaskEfficiency.ToString("F1")</div>
+                                            <div class="text-muted small">ср. эффективность</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <h6 class="mb-2">Ключевые показатели</h6>
+                                        <div class="progress mb-2" style="height: 8px;">
+                                            <div class="progress-bar bg-success" role="progressbar"
+                                                 style="width: @(Model.Evaluation.Summary.AttendanceScore)%"
+                                                 aria-valuenow="@(Model.Evaluation.Summary.AttendanceScore)"
+                                                 aria-valuemin="0" aria-valuemax="100"
+                                                 data-bs-toggle="tooltip" title="Посещаемость: @Model.Evaluation.Summary.AttendanceScore.ToString("F1")%"></div>
+                                        </div>
+                                        <div class="progress mb-2" style="height: 8px;">
+                                            <div class="progress-bar bg-info" role="progressbar"
+                                                 style="width: @(Model.Evaluation.Summary.TaskScore)%"
+                                                 aria-valuenow="@(Model.Evaluation.Summary.TaskScore)"
+                                                 aria-valuemin="0" aria-valuemax="100"
+                                                 data-bs-toggle="tooltip" title="Выполнение задач: @Model.Evaluation.Summary.TaskScore.ToString("F1")%"></div>
+                                        </div>
+                                        <div class="progress mb-2" style="height: 8px;">
+                                            <div class="progress-bar bg-warning" role="progressbar"
+                                                 style="width: @(Model.Evaluation.Summary.PenaltyScore)%"
+                                                 aria-valuenow="@(Model.Evaluation.Summary.PenaltyScore)"
+                                                 aria-valuemin="0" aria-valuemax="100"
+                                                 data-bs-toggle="tooltip" title="Оценка дисциплины: @Model.Evaluation.Summary.PenaltyScore.ToString("F1")%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Оценки по критериям</h6>
+                                </div>
+                                <div class="card-body">
+                                    @if (Model.EvaluationScores.Any())
+                                    {
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Критерий</th>
+                                                        <th>Вес</th>
+                                                        <th>Оценка</th>
+                                                        <th>Итог</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var score in Model.EvaluationScores)
+                                                    {
+                                                        <tr>
+                                                            <td>@score.Criterion.Name</td>
+                                                            <td>@score.Criterion.Weight.ToString("P0")</td>
+                                                            <td>
+                                                                <div class="progress" style="height: 8px;">
+                                                                    <div class="progress-bar @(score.Score >= 70 ? "bg-success" : (score.Score >= 50 ? "bg-warning" : "bg-danger"))"
+                                                                         role="progressbar"
+                                                                         style="width: @(score.Score)%"
+                                                                         aria-valuenow="@(score.Score)"
+                                                                         aria-valuemin="0"
+                                                                         aria-valuemax="100"></div>
+                                                                </div>
+                                                                <small class="d-block text-center mt-1">@score.Score.ToString("F1")</small>
+                                                            </td>
+                                                            <td>@((score.Score * score.Criterion.Weight).ToString("F1"))</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                                <tfoot class="table-secondary">
+                                                    <tr>
+                                                        <th colspan="2">Итоговый результат:</th>
+                                                        <th colspan="2">@Model.Evaluation.Score.ToString("F1")</th>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i> Нет детальных оценок по критериям.
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Комментарий к оценке</h6>
+                                </div>
+                                <div class="card-body">
+                                    @if (!string.IsNullOrEmpty(Model.Evaluation.Notes))
+                                    {
+                                        <p class="card-text">@Model.Evaluation.Notes</p>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted fst-italic">Комментарий не добавлен</p>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Рекомендации на основе оценки -->
+                            <div class="card mt-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Рекомендации</h6>
+                                </div>
+                                <div class="card-body">
+                                    @if (Model.Evaluation.Score >= 80)
+                                    {
+                                        <div class="alert alert-success">
+                                            <i class="fas fa-award me-2"></i> <strong>Отличный результат!</strong>
+                                            <p class="mb-0 mt-2">Сотрудник демонстрирует высокую эффективность. Рекомендуется:</p>
+                                            <ul class="mb-0 mt-1">
+                                                <li>Рассмотреть возможность премирования</li>
+                                                <li>Обсудить карьерные перспективы</li>
+                                                <li>Вовлечь в процесс наставничества коллег</li>
+                                            </ul>
+                                        </div>
+                                    }
+                                    else if (Model.Evaluation.Score >= 60)
+                                    {
+                                        <div class="alert alert-primary">
+                                            <i class="fas fa-thumbs-up me-2"></i> <strong>Хороший результат</strong>
+                                            <p class="mb-0 mt-2">Сотрудник работает хорошо, но есть точки для роста. Рекомендуется:</p>
+                                            <ul class="mb-0 mt-1">
+                                                <li>Обсудить области для развития</li>
+                                                <li>Предложить дополнительное обучение</li>
+                                                <li>Организовать регулярную обратную связь</li>
+                                            </ul>
+                                        </div>
+                                    }
+                                    else if (Model.Evaluation.Score >= 40)
+                                    {
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-circle me-2"></i> <strong>Требуется внимание</strong>
+                                            <p class="mb-0 mt-2">Показатели работы сотрудника ниже ожидаемых. Рекомендуется:</p>
+                                            <ul class="mb-0 mt-1">
+                                                <li>Провести детальное обсуждение результатов</li>
+                                                <li>Разработать план повышения эффективности</li>
+                                                <li>Установить промежуточные контрольные точки</li>
+                                            </ul>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-danger">
+                                            <i class="fas fa-times-circle me-2"></i> <strong>Критически низкий результат</strong>
+                                            <p class="mb-0 mt-2">Показатели работы значительно ниже требуемых. Рекомендуется:</p>
+                                            <ul class="mb-0 mt-1">
+                                                <li>Провести срочную встречу с сотрудником</li>
+                                                <li>Разработать детальный план действий</li>
+                                                <li>Рассмотреть необходимость ротации</li>
+                                                <li>Организовать интенсивное обучение</li>
+                                            </ul>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <a asp-page="/Evaluations/Index" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> К списку оценок
+                            </a>
+                            <a asp-page="/Employees/Details" asp-route-id="@Model.Evaluation.EmployeeId" class="btn btn-outline-primary ms-2">
+                                <i class="fas fa-user me-1"></i> Профиль сотрудника
+                            </a>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-success" onclick="window.print()">
+                                <i class="fas fa-print me-1"></i> Печать
+                            </button>
+                            <a asp-page="/Evaluations/Edit" asp-route-id="@Model.Evaluation.Id" class="btn btn-primary ms-2">
+                                <i class="fas fa-edit me-1"></i> Редактировать
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Инициализация тултипов
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+        });
+    </script>
+}
