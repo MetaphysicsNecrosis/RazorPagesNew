@@ -196,5 +196,105 @@ namespace RazorPagesNew.Services.Implementation
                 await _dbContext.SaveChangesAsync();
             }
         }
+
+        /// <summary>
+        /// Синхронизирует всех пользователей между Identity и кастомной системой
+        /// </summary>
+        public async Task SynchronizeUsersAsync()
+        {
+            // 1. Получаем всех пользователей из обеих систем
+            var identityUsers = await _identityUserManager.Users.ToListAsync();
+            var customUsers = await _dbContext.Users.Include(u => u.Role).ToListAsync();
+
+            // 2. Для каждого пользователя из Identity проверяем наличие в кастомной системе
+            foreach (var identityUser in identityUsers)
+            {
+                var customUser = customUsers.FirstOrDefault(u => u.IdentityUserId == identityUser.Id);
+
+                // Если пользователя нет в кастомной системе, создаем его
+                if (customUser == null)
+                {
+                    // Получаем роли пользователя из Identity
+                    var userRoles = await _identityUserManager.GetRolesAsync(identityUser);
+
+                    // Определяем основную роль - первую из списка или "User" по умолчанию
+                    string mainRoleName = userRoles.Any() ? userRoles.First() : "User";
+
+                    // Находим или создаем соответствующую роль в кастомной системе
+                    var customRole = await _dbContext.Roles.FirstOrDefaultAsync(r => r.Name == mainRoleName);
+                    if (customRole == null)
+                    {
+                        customRole = new Role { Name = mainRoleName };
+                        await _dbContext.Roles.AddAsync(customRole);
+                        await _dbContext.SaveChangesAsync();
+                    }
+
+                    // Создаем пользователя в кастомной системе
+                    customUser = new User
+                    {
+                        Username = identityUser.UserName,
+                        IdentityUserId = identityUser.Id,
+                        RoleId = customRole.Id,
+                        PasswordHash = "MANAGED_BY_IDENTITY" // пароль хранится в Identity
+                    };
+
+                    await _dbContext.Users.AddAsync(customUser);
+                    await _dbContext.SaveChangesAsync();
+                }
+                else
+                {
+                    // Синхронизируем роли существующего пользователя
+                    await SynchronizeUserRolesAsync(identityUser.Id);
+                }
+            }
+
+            // 3. Для каждого пользователя из кастомной системы проверяем наличие в Identity
+            foreach (var customUser in customUsers)
+            {
+                // Если у пользователя нет привязки к Identity или пользователь не найден в Identity
+                if (string.IsNullOrEmpty(customUser.IdentityUserId) ||
+                    !identityUsers.Any(u => u.Id == customUser.IdentityUserId))
+                {
+                    // Создаем нового пользователя в Identity
+                    var newIdentityUser = new IdentityUser
+                    {
+                        UserName = customUser.Username,
+                        Email = customUser.Username // Предполагаем, что Username это email
+                    };
+
+                    // Генерируем временный пароль
+                    string tempPassword = GenerateRandomPassword();
+                    var result = await _identityUserManager.CreateAsync(newIdentityUser, tempPassword);
+
+                    if (result.Succeeded)
+                    {
+                        // Добавляем пользователю роль из кастомной системы
+                        if (customUser.Role != null)
+                        {
+                            await _identityUserManager.AddToRoleAsync(newIdentityUser, customUser.Role.Name);
+                        }
+
+                        // Обновляем ссылку на Identity в кастомном пользователе
+                        customUser.IdentityUserId = newIdentityUser.Id;
+                        await _dbContext.SaveChangesAsync();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Генерирует случайный пароль для новых пользователей
+        /// </summary>
+        private string GenerateRandomPassword(int length = 12)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+            var random = new Random();
+
+            // Генерируем случайную строку
+            var password = new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+
+            return password;
+        }
     }
 }

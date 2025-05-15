@@ -50,7 +50,7 @@ namespace RazorPagesNew.Services.Interfaces
         /// <summary>
         /// Получение всех пользователей
         /// </summary>
-        Task<IEnumerable<User>> GetAllUsersAsync();
+        Task<List<User>> GetAllUsersAsync();
 
         /// <summary>
         /// Получение текущего пользователя из ClaimsPrincipal

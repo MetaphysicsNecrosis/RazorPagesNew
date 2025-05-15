@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using RazorPagesNew.ModelsDb;
 using RazorPagesNew.Services.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -47,10 +48,13 @@ namespace RazorPagesNew.Pages.Criteria
             if (!User.Identity.IsAuthenticated)
                 return RedirectToPage("/Account/Login");
 
+            // Для отладки
+            Console.WriteLine($"OnPostCreateAsync: Name = {name}, Weight = {weight}");
+
             // Базовая валидация
             if (string.IsNullOrWhiteSpace(name) || weight <= 0 || weight > 1)
             {
-                StatusMessage = "Ошибка: Некорректные данные. Проверьте название и вес критерия.";
+                StatusMessage = $"Ошибка: Некорректные данные. Проверьте название и вес критерия. (Name = {name}, Weight = {weight})";
                 return RedirectToPage();
             }
 
@@ -60,11 +64,12 @@ namespace RazorPagesNew.Pages.Criteria
                 var criterion = new EvaluationCriterion
                 {
                     Name = name,
-                    Weight = weight
+                    Weight = weight,
+                    CreatedAt = DateTime.Now,
                 };
 
                 await _evaluationService.CreateCriterionAsync(criterion);
-                StatusMessage = $"Критерий '{name}' успешно создан.";
+                StatusMessage = $"Критерий '{name}' успешно создан с весом {weight:P0}.";
             }
             catch (Exception ex)
             {
@@ -80,10 +85,13 @@ namespace RazorPagesNew.Pages.Criteria
             if (!User.Identity.IsAuthenticated)
                 return RedirectToPage("/Account/Login");
 
+            // Для отладки
+            Console.WriteLine($"OnPostEditAsync: Id = {id}, Name = {name}, Weight = {weight}");
+
             // Базовая валидация
             if (id <= 0 || string.IsNullOrWhiteSpace(name) || weight <= 0 || weight > 1)
             {
-                StatusMessage = "Ошибка: Некорректные данные. Проверьте название и вес критерия.";
+                StatusMessage = $"Ошибка: Некорректные данные. Проверьте название и вес критерия. (Id = {id}, Name = {name}, Weight = {weight})";
                 return RedirectToPage();
             }
 
@@ -103,7 +111,7 @@ namespace RazorPagesNew.Pages.Criteria
                 criterion.UpdatedAt = DateTime.UtcNow;
 
                 await _evaluationService.UpdateCriterionAsync(criterion);
-                StatusMessage = $"Критерий '{name}' успешно обновлен.";
+                StatusMessage = $"Критерий '{name}' успешно обновлен с весом {weight:P0}.";
             }
             catch (Exception ex)
             {

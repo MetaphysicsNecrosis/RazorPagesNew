@@ -162,11 +162,6 @@ namespace RazorPagesNew.Services.Implementation
             return await _context.Users.ToListAsync();
         }
 
-        Task<IEnumerable<User>> IUserService.GetAllUsersAsync()
-        {
-            throw new NotImplementedException();
-        }
-
         public Task<bool> AddUserToRoleAsync(int userId, string roleName)
         {
             throw new NotImplementedException();

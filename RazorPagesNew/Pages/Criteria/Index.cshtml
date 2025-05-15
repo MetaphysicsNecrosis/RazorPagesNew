@@ -22,6 +22,15 @@
                     </button>
                 </div>
                 <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        var statusClass = Model.StatusMessage.Contains("Ошибка") ? "danger" : "success";
+                        <div class="alert alert-@statusClass alert-dismissible fade show" role="alert">
+                            @Model.StatusMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
                     <p class="mb-4">
                         Система оценки персонала основана на наборе взвешенных критериев.
                         Каждый критерий имеет свой вес в общей оценке сотрудника.
@@ -119,12 +128,12 @@
                                     {
                                         <i class="fas fa-check-circle me-1"></i>
                                         <div>Весовые коэффициенты сбалансированы</div>
-                                                    }
+                                    }
                                     else
                                     {
                                         <i class="fas fa-exclamation-triangle me-1"></i>
                                         <div>Сумма весов должна быть равна 100 %</div>
-                                                    }
+                                    }
                                 </small>
                             </div>
                         </div>
@@ -205,6 +214,8 @@
                             <small id="weightValue">0.10 (10%)</small>
                             <small>1</small>
                         </div>
+                        <!-- Добавляем скрытое поле для хранения значения веса -->
+                        <input type="hidden" id="criterionWeightValue" name="Weight" value="0.1" />
                     </div>
                     <div class="alert alert-secondary">
                         <small>
@@ -242,13 +253,15 @@
                     </div>
                     <div class="mb-3">
                         <label for="editCriterionWeight" class="form-label">Вес (от 0 до 1)</label>
-                        <input type="range" class="form-range" id="editCriterionWeight" name="Weight"
+                        <input type="range" class="form-range" id="editCriterionWeight"
                                min="0" max="1" step="0.05" value="0.1">
                         <div class="d-flex justify-content-between">
                             <small>0</small>
                             <small id="editWeightValue">0.10 (10%)</small>
                             <small>1</small>
                         </div>
+                        <!-- Добавляем скрытое поле для хранения значения веса -->
+                        <input type="hidden" id="editCriterionWeightValue" name="Weight" value="0.1" />
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -305,6 +318,8 @@
                 var value = $(this).val();
                 var percent = (value * 100).toFixed(0);
                 $('#weightValue').text(value + ' (' + percent + '%)');
+                // Обновляем значение в скрытом поле
+                $('#criterionWeightValue').val(value);
             });
 
             // Обработка изменения слайдера веса при редактировании
@@ -312,6 +327,8 @@
                 var value = $(this).val();
                 var percent = (value * 100).toFixed(0);
                 $('#editWeightValue').text(value + ' (' + percent + '%)');
+                // Обновляем значение в скрытом поле
+                $('#editCriterionWeightValue').val(value);
             });
 
             // Обработка клика по кнопке редактирования
@@ -323,6 +340,8 @@
                 $('#editCriterionId').val(id);
                 $('#editCriterionName').val(name);
                 $('#editCriterionWeight').val(weight);
+                // Устанавливаем значение в скрытое поле
+                $('#editCriterionWeightValue').val(weight);
 
                 var percent = (weight * 100).toFixed(0);
                 $('#editWeightValue').text(weight + ' (' + percent + '%)');

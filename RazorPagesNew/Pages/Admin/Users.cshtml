@@ -1,0 +1,222 @@
+﻿@page
+@model RazorPagesNew.Pages.Admin.UsersModel
+@{
+    ViewData["Title"] = "Управление пользователями";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Управление пользователями</h5>
+                    <div>
+                        <a asp-page="/Account/Register" class="btn btn-light btn-sm">
+                            <i class="fas fa-user-plus me-1"></i> Новый пользователь
+                        </a>
+                        <button id="syncUsersBtn" class="btn btn-light btn-sm">
+                            <i class="fas fa-sync me-1"></i> Синхронизировать
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        var statusClass = Model.StatusMessage.Contains("Ошибка") ? "danger" : "success";
+                        <div class="alert alert-@statusClass alert-dismissible fade show" role="alert">
+                            @Model.StatusMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <p class="mb-4">
+                        На этой странице вы можете управлять пользователями системы и их ролями.
+                        Все изменения автоматически синхронизируются между ASP.NET Core Identity и кастомной системой пользователей.
+                    </p>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Имя пользователя</th>
+                                    <th>Email</th>
+                                    <th>Роли</th>
+                                    <th>Статус синхронизации</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in Model.Users)
+                                {
+                                    <tr>
+                                        <td>@user.UserName</td>
+                                        <td>@user.Email</td>
+                                        <td>
+                                            @foreach (var role in user.Roles)
+                                            {
+                                                <span class="badge bg-secondary me-1">@role</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (user.IsInSync)
+                                            {
+                                                <span class="badge bg-success">Синхронизировано</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning">Не синхронизировано</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" class="btn btn-outline-primary edit-roles"
+                                                        data-id="@user.Id"
+                                                        data-name="@user.UserName">
+                                                    <i class="fas fa-user-tag"></i>
+                                                </button>
+                                                @if (!user.IsSystemUser)
+                                                {
+                                                    <button type="button" class="btn btn-outline-danger delete-user"
+                                                            data-id="@user.Id"
+                                                            data-name="@user.UserName">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно редактирования ролей пользователя -->
+<div class="modal fade" id="editRolesModal" tabindex="-1" aria-labelledby="editRolesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editRolesForm" method="post" asp-page-handler="UpdateRoles">
+                <input type="hidden" id="editUserId" name="userId">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editRolesModalLabel">Редактирование ролей пользователя</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Редактирование ролей пользователя <strong id="editUserName"></strong>:</p>
+
+                    <div id="roleCheckboxes">
+                        @foreach (var role in Model.AllRoles)
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input role-checkbox" type="checkbox" name="selectedRoles" value="@role" id="role-@role">
+                                <label class="form-check-label" for="role-@role">
+                                    @role
+                                </label>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно подтверждения удаления пользователя -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="DeleteUser">
+                <input type="hidden" id="deleteUserId" name="userId">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteUserModalLabel">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Вы уверены, что хотите удалить пользователя <strong id="deleteUserName"></strong>?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Внимание!</strong> Удаление пользователя приведет к удалению всех связанных с ним данных.
+                        Это действие нельзя будет отменить.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">Удалить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Глобальный объект для хранения данных пользователей
+            var userData = @Html.Raw(Json.Serialize(Model.UsersRolesJson));
+
+            // Обработка клика по кнопке редактирования ролей
+            $('.edit-roles').click(function() {
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+
+                // Заполняем форму данными пользователя
+                $('#editUserId').val(id);
+                $('#editUserName').text(name);
+
+                // Сбрасываем все чекбоксы
+                $('.role-checkbox').prop('checked', false);
+
+                // Отмечаем текущие роли пользователя
+                const userRoles = userData.find(u => u.id === id)?.roles || [];
+                userRoles.forEach(role => {
+                    $(`#role-${role}`).prop('checked', true);
+                });
+
+                // Показываем модальное окно
+                $('#editRolesModal').modal('show');
+            });
+
+            // Обработка клика по кнопке удаления пользователя
+            $('.delete-user').click(function() {
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+
+                $('#deleteUserId').val(id);
+                $('#deleteUserName').text(name);
+
+                $('#deleteUserModal').modal('show');
+            });
+
+            // Обработка клика по кнопке синхронизации
+            $('#syncUsersBtn').click(function() {
+                $(this).prop('disabled', true);
+                $(this).html('<i class="fas fa-spinner fa-spin me-1"></i> Синхронизация...');
+
+                // Отправляем запрос на синхронизацию
+                $.ajax({
+                    url: '?handler=SyncUsers',
+                    type: 'POST',
+                    headers: {
+                        "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(result) {
+                        location.reload();
+                    },
+                    error: function(error) {
+                        alert('Произошла ошибка при синхронизации пользователей');
+                        $('#syncUsersBtn').prop('disabled', false);
+                        $('#syncUsersBtn').html('<i class="fas fa-sync me-1"></i> Синхронизировать');
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,179 @@
+﻿@page
+@model RazorPagesNew.Pages.Admin.RolesModel
+@{
+    ViewData["Title"] = "Управление ролями";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Управление ролями в системе</h5>
+                    <div>
+                        <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#createRoleModal">
+                            <i class="fas fa-plus me-1"></i> Новая роль
+                        </button>
+                        <button id="syncRolesBtn" class="btn btn-light btn-sm">
+                            <i class="fas fa-sync me-1"></i> Синхронизировать
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        var statusClass = Model.StatusMessage.Contains("Ошибка") ? "danger" : "success";
+                        <div class="alert alert-@statusClass alert-dismissible fade show" role="alert">
+                            @Model.StatusMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <p class="mb-4">
+                        На этой странице вы можете управлять ролями в системе и назначать их пользователям.
+                        Все изменения автоматически синхронизируются между ASP.NET Core Identity и кастомной системой ролей.
+                    </p>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Роль</th>
+                                    <th>Количество пользователей</th>
+                                    <th>Статус синхронизации</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var role in Model.Roles)
+                                {
+                                    <tr>
+                                        <td>@role.Name</td>
+                                        <td>@role.UserCount</td>
+                                        <td>
+                                            @if (role.IsInSync)
+                                            {
+                                                <span class="badge bg-success">Синхронизировано</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning">Не синхронизировано</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a asp-page="./RoleUsers" asp-route-roleName="@role.Name" class="btn btn-outline-primary">
+                                                    <i class="fas fa-users"></i>
+                                                </a>
+                                                @if (!role.IsSystemRole)
+                                                {
+                                                    <button type="button" class="btn btn-outline-danger delete-role"
+                                                            data-id="@role.Id"
+                                                            data-name="@role.Name">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для создания роли -->
+<div class="modal fade" id="createRoleModal" tabindex="-1" aria-labelledby="createRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="CreateRole">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="createRoleModalLabel">Создание новой роли</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="roleName" class="form-label">Название роли</label>
+                        <input type="text" class="form-control" id="roleName" name="roleName" required>
+                        <div class="form-text">Название роли должно быть уникальным и не должно содержать пробелов.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для подтверждения удаления -->
+<div class="modal fade" id="deleteRoleModal" tabindex="-1" aria-labelledby="deleteRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="DeleteRole">
+                <input type="hidden" id="deleteRoleId" name="roleId">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteRoleModalLabel">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Вы уверены, что хотите удалить роль <strong id="deleteRoleName"></strong>?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Внимание!</strong> Удаление роли может повлиять на работу системы.
+                        Убедитесь, что эта роль не используется пользователями.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">Удалить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Обработка клика по кнопке удаления
+            $('.delete-role').click(function() {
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+
+                $('#deleteRoleId').val(id);
+                $('#deleteRoleName').text(name);
+
+                $('#deleteRoleModal').modal('show');
+            });
+
+            // Обработка клика по кнопке синхронизации
+            $('#syncRolesBtn').click(function() {
+                $(this).prop('disabled', true);
+                $(this).html('<i class="fas fa-spinner fa-spin me-1"></i> Синхронизация...');
+
+                // Отправляем запрос на синхронизацию
+                $.ajax({
+                    url: '?handler=SyncRoles',
+                    type: 'POST',
+                    headers: {
+                        "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(result) {
+                        location.reload();
+                    },
+                    error: function(error) {
+                        alert('Произошла ошибка при синхронизации ролей');
+                        $('#syncRolesBtn').prop('disabled', false);
+                        $('#syncRolesBtn').html('<i class="fas fa-sync me-1"></i> Синхронизировать');
+                    }
+                });
+            });
+        });
+    </script>
+}

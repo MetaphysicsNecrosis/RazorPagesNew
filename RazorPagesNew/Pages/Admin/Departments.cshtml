@@ -1,0 +1,274 @@
+﻿@page
+@model RazorPagesNew.Pages.Admin.DepartmentsModel
+@{
+    ViewData["Title"] = "Управление отделами";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-building me-2"></i>Управление отделами</h5>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#createDepartmentModal">
+                        <i class="fas fa-plus me-1"></i> Новый отдел
+                    </button>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        var statusClass = Model.StatusMessage.Contains("Ошибка") ? "danger" : "success";
+                        <div class="alert alert-@statusClass alert-dismissible fade show" role="alert">
+                            @Model.StatusMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <p class="mb-4">
+                        Управление отделами компании. Здесь вы можете создавать, редактировать и удалять отделы.
+                    </p>
+
+                    @if (Model.Departments.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Название отдела</th>
+                                        <th>Количество сотрудников</th>
+                                        <th>Средняя оценка</th>
+                                        <th>Создан</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var department in Model.Departments)
+                                    {
+                                        <tr>
+                                            <td>@department.Name</td>
+                                            <td>@department.EmployeeCount</td>
+                                            <td>
+                                                @if (department.AverageScore > 0)
+                                                {
+                                                    <div class="d-flex align-items-center">
+                                                        <span class="me-2">@department.AverageScore.ToString("F1")</span>
+                                                        <div class="progress flex-grow-1" style="height: 8px;">
+                                                            <div class="progress-bar @(department.AverageScore >= 70 ? "bg-success" : department.AverageScore >= 50 ? "bg-warning" : "bg-danger")"
+                                                                 role="progressbar"
+                                                                 style="width: @(department.AverageScore)%"
+                                                                 aria-valuenow="@(department.AverageScore)"
+                                                                 aria-valuemin="0"
+                                                                 aria-valuemax="100"></div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Нет данных</span>
+                                                }
+                                            </td>
+                                            <td>@department.CreatedAt.ToString("dd.MM.yyyy")</td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a asp-page="/Employees/Index" asp-route-departmentId="@department.Id" class="btn btn-outline-primary">
+                                                        <i class="fas fa-users"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-outline-secondary edit-department"
+                                                            data-id="@department.Id"
+                                                            data-name="@department.Name">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    @if (!department.HasEmployees)
+                                                    {
+                                                        <button type="button" class="btn btn-outline-danger delete-department"
+                                                                data-id="@department.Id"
+                                                                data-name="@department.Name">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-4">
+                            <h5 class="mb-3">Распределение сотрудников по отделам</h5>
+                            <div class="chart-container" style="position: relative; height: 300px;">
+                                <canvas id="departmentsChart"></canvas>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> В системе пока нет отделов. Создайте первый отдел, чтобы начать структурирование компании.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для создания нового отдела -->
+<div class="modal fade" id="createDepartmentModal" tabindex="-1" aria-labelledby="createDepartmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Create">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="createDepartmentModalLabel">Новый отдел</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="departmentName" class="form-label">Название отдела</label>
+                        <input type="text" class="form-control" id="departmentName" name="name" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для редактирования отдела -->
+<div class="modal fade" id="editDepartmentModal" tabindex="-1" aria-labelledby="editDepartmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Edit">
+                <input type="hidden" id="editDepartmentId" name="id">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editDepartmentModalLabel">Редактирование отдела</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editDepartmentName" class="form-label">Название отдела</label>
+                        <input type="text" class="form-control" id="editDepartmentName" name="name" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для подтверждения удаления -->
+<div class="modal fade" id="deleteDepartmentModal" tabindex="-1" aria-labelledby="deleteDepartmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Delete">
+                <input type="hidden" id="deleteDepartmentId" name="id">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteDepartmentModalLabel">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Вы уверены, что хотите удалить отдел <strong id="deleteDepartmentName"></strong>?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Внимание!</strong> Удаление отдела невозможно, если в нем есть сотрудники.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">Удалить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Обработка клика по кнопке редактирования
+            $('.edit-department').click(function() {
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+
+                $('#editDepartmentId').val(id);
+                $('#editDepartmentName').val(name);
+
+                $('#editDepartmentModal').modal('show');
+            });
+
+            // Обработка клика по кнопке удаления
+            $('.delete-department').click(function() {
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+
+                $('#deleteDepartmentId').val(id);
+                $('#deleteDepartmentName').text(name);
+
+                $('#deleteDepartmentModal').modal('show');
+            });
+
+            // Создание графика распределения сотрудников
+        @if (Model.Departments.Any())
+        {
+            <text>
+                    const ctx = document.getElementById('departmentsChart').getContext('2d');
+                    const departmentData = @Html.Raw(Json.Serialize(Model.ChartData));
+
+                    new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: departmentData.labels,
+                            datasets: [{
+                                data: departmentData.data,
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.7)',
+                                    'rgba(54, 162, 235, 0.7)',
+                                    'rgba(255, 206, 86, 0.7)',
+                                    'rgba(75, 192, 192, 0.7)',
+                                    'rgba(153, 102, 255, 0.7)',
+                                    'rgba(255, 159, 64, 0.7)',
+                                    'rgba(199, 199, 199, 0.7)',
+                                    'rgba(83, 102, 255, 0.7)',
+                                    'rgba(40, 159, 64, 0.7)',
+                                    'rgba(210, 199, 199, 0.7)'
+                                ],
+                                borderColor: [
+                                    'rgba(255, 99, 132, 1)',
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 206, 86, 1)',
+                                    'rgba(75, 192, 192, 1)',
+                                    'rgba(153, 102, 255, 1)',
+                                    'rgba(255, 159, 64, 1)',
+                                    'rgba(199, 199, 199, 1)',
+                                    'rgba(83, 102, 255, 1)',
+                                    'rgba(40, 159, 64, 1)',
+                                    'rgba(210, 199, 199, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Распределение сотрудников по отделам'
+                                }
+                            }
+                        }
+                    });
+            </text>
+        }
+        });
+    </script>
+}

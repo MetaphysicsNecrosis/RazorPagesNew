@@ -20,7 +20,7 @@ namespace RazorPagesNew.Services.Background
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
-            _syncInterval = TimeSpan.FromMinutes(30); // Синхронизация каждые 30 минут
+            _syncInterval = TimeSpan.FromMinutes(2); // Синхронизация каждые 30 минут
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

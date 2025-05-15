@@ -231,7 +231,7 @@ namespace RazorPagesNew.Services.Implementation
         /// <summary>
         /// Получение всех пользователей
         /// </summary>
-        public async Task<IEnumerable<User>> GetAllUsersAsync()
+        public async Task<List<User>> GetAllUsersAsync()
         {
             return await _context.Users
                 .Include(u => u.Role)

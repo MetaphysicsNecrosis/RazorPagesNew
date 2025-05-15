@@ -23,5 +23,9 @@ namespace RazorPagesNew.Services.Interfaces
         /// Удаляет роль у пользователя в обеих системах
         /// </summary>
         Task RemoveUserFromRoleAsync(string identityUserId, string roleName);
+        /// <summary>
+        /// Синхронизирует всех пользователей между Identity и кастомной системой
+        /// </summary>
+        Task SynchronizeUsersAsync();
     }
 }

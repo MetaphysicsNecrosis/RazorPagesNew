@@ -1,0 +1,122 @@
+﻿@page "{roleName}"
+@model RazorPagesNew.Pages.Admin.RoleUsersModel
+@{
+    ViewData["Title"] = $"Пользователи в роли {Model.RoleName}";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Пользователи в роли @Model.RoleName</h5>
+                    <div>
+                        <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                            <i class="fas fa-user-plus me-1"></i> Добавить пользователя
+                        </button>
+                        <a asp-page="./Roles" class="btn btn-light btn-sm">
+                            <i class="fas fa-arrow-left me-1"></i> К списку ролей
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        var statusClass = Model.StatusMessage.Contains("Ошибка") ? "danger" : "success";
+                        <div class="alert alert-@statusClass alert-dismissible fade show" role="alert">
+                            @Model.StatusMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <p class="mb-4">
+                        На этой странице вы можете управлять пользователями с ролью <strong>@Model.RoleName</strong>.
+                    </p>
+
+                    @if (Model.UsersInRole.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Имя пользователя</th>
+                                        <th>Email</th>
+                                        <th>Статус синхронизации</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var user in Model.UsersInRole)
+                                    {
+                                        <tr>
+                                            <td>@user.UserName</td>
+                                            <td>@user.Email</td>
+                                            <td>
+                                                @if (user.IsInSync)
+                                                {
+                                                    <span class="badge bg-success">Синхронизировано</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning">Не синхронизировано</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <form method="post" asp-page-handler="RemoveFromRole" asp-route-userId="@user.Id">
+                                                        <input type="hidden" name="roleName" value="@Model.RoleName" />
+                                                        <button type="submit" class="btn btn-outline-danger"
+                                                                onclick="return confirm('Вы уверены, что хотите удалить пользователя из роли?')">
+                                                            <i class="fas fa-user-minus"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> В данной роли пока нет пользователей.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для добавления пользователя в роль -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="AddToRole">
+                <input type="hidden" name="roleName" value="@Model.RoleName" />
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addUserModalLabel">Добавление пользователя в роль</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="userId" class="form-label">Пользователь</label>
+                        <select class="form-select" id="userId" name="userId" required>
+                            <option value="">Выберите пользователя</option>
+                            @foreach (var user in Model.UsersNotInRole)
+                            {
+                                <option value="@user.Id">@user.UserName (@user.Email)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

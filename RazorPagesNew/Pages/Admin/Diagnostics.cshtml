@@ -1,0 +1,263 @@
+﻿cshtml@page
+@model RazorPagesNew.Pages.Admin.DiagnosticsModel
+@{
+    ViewData["Title"] = "Диагностика системы";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-stethoscope me-2"></i>Диагностика системы</h5>
+                    <button id="refreshBtn" class="btn btn-light btn-sm">
+                        <i class="fas fa-redo-alt me-1"></i> Обновить
+                    </button>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        var statusClass = Model.StatusMessage.Contains("Ошибка") ? "danger" : "success";
+                        <div class="alert alert-@statusClass alert-dismissible fade show" role="alert">
+                            @Model.StatusMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <p class="mb-4">
+                        На этой странице вы можете проверить целостность данных и выполнить диагностику системы.
+                    </p>
+
+                    <h5 class="border-bottom pb-2 mb-3">Статус компонентов системы</h5>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Компонент</th>
+                                    <th>Статус</th>
+                                    <th>Информация</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>База данных</td>
+                                    <td>
+                                        @if (Model.DatabaseStatus)
+                                        {
+                                            <span class="badge bg-success">Доступна</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Не доступна</span>
+                                        }
+                                    </td>
+                                    <td>@Model.DatabaseInfo</td>
+                                </tr>
+                                <tr>
+                                    <td>Identity</td>
+                                    <td>
+                                        @if (Model.IdentityStatus)
+                                        {
+                                            <span class="badge bg-success">Работает</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Ошибка</span>
+                                        }
+                                    </td>
+                                    <td>@Model.IdentityInfo</td>
+                                </tr>
+                                <tr>
+                                    <td>Миграции</td>
+                                    <td>
+                                        @if (Model.MigrationsStatus)
+                                        {
+                                            <span class="badge bg-success">Применены</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning">Требуется обновление</span>
+                                        }
+                                    </td>
+                                    <td>@Model.MigrationsInfo</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h5 class="border-bottom pb-2 mb-3">Целостность данных</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Синхронизация ролей</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <tr>
+                                                <td>Всего ролей в Identity:</td>
+                                                <td>@Model.IdentityRolesCount</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Всего ролей в кастомной системе:</td>
+                                                <td>@Model.CustomRolesCount</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Синхронизировано:</td>
+                                                <td>
+                                                    @if (Model.RolesInSync)
+                                                    {
+                                                        <span class="badge bg-success">Да</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-danger">Нет</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    @if (!Model.RolesInSync)
+                                    {
+                                        <div class="alert alert-warning mt-2">
+                                            <i class="fas fa-exclamation-triangle me-1"></i> Несинхронизированные роли:
+                                            <ul class="mb-0 mt-1">
+                                                @foreach (var role in Model.UnsyncedRoles)
+                                                {
+                                                    <li>@role</li>
+                                                }
+                                            </ul>
+                                        </div>
+                                        <form method="post" asp-page-handler="SyncRoles" class="mt-2">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-sync me-1"></i> Синхронизировать роли
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Синхронизация пользователей</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <tr>
+                                                <td>Всего пользователей в Identity:</td>
+                                                <td>@Model.IdentityUsersCount</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Всего пользователей в кастомной системе:</td>
+                                                <td>@Model.CustomUsersCount</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Синхронизировано:</td>
+                                                <td>
+                                                    @if (Model.UsersInSync)
+                                                    {
+                                                        <span class="badge bg-success">Да</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-danger">Нет</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    @if (!Model.UsersInSync)
+                                    {
+                                        <div class="alert alert-warning mt-2">
+                                            <i class="fas fa-exclamation-triangle me-1"></i> Обнаружены несинхронизированные пользователи.
+                                        </div>
+                                        <form method="post" asp-page-handler="SyncUsers" class="mt-2">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-sync me-1"></i> Синхронизировать пользователей
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="border-bottom pb-2 mb-3">Диагностика и ремонт</h5>
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Проверка целостности данных</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        Проверяет целостность связей между таблицами и исправляет ошибки.
+                                    </p>
+                                    <form method="post" asp-page-handler="CheckDataIntegrity">
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-check-circle me-1"></i> Запустить проверку
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Полная синхронизация</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        Выполняет полную синхронизацию между Identity и кастомной системой.
+                                    </p>
+                                    <form method="post" asp-page-handler="FullSync">
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-sync-alt me-1"></i> Запустить синхронизацию
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Проверка производительности</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        Проверяет производительность базы данных и выполняет оптимизацию.
+                                    </p>
+                                    <form method="post" asp-page-handler="CheckPerformance">
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-tachometer-alt me-1"></i> Запустить проверку
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i> <strong>Подсказка:</strong>
+                        Системная диагностика выполняется автоматически каждый день в фоновом режиме.
+                        Последняя автоматическая проверка: @Model.LastAutomaticCheck.ToString("dd.MM.yyyy HH:mm")
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Обновление страницы при нажатии кнопки
+            $('#refreshBtn').click(function() {
+                location.reload();
+            });
+        });
+    </script>
+}

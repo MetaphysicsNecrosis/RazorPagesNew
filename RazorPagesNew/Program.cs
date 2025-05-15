@@ -107,6 +107,8 @@ builder.Services.AddScoped<IUserService, IdentityUserService>();
 builder.Services.AddHostedService<RoleSynchronizationBackgroundService>();
 
 
+
+
 // Регистрация сервисов
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
