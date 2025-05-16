@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
 using RazorPagesNew.ModelsDb;
 using RazorPagesNew.Services.Interfaces;
 using System;
@@ -31,6 +30,9 @@ namespace RazorPagesNew.Pages.ActivitySummaries
         }
 
         public IList<WorkActivitySummary> Summaries { get; set; } = new List<WorkActivitySummary>();
+        public Dictionary<int, Employee> EmployeeDict { get; set; } = new Dictionary<int, Employee>();
+        public Dictionary<int, Department> DepartmentDict { get; set; } = new Dictionary<int, Department>();
+        public Dictionary<int, User> UserDict { get; set; } = new Dictionary<int, User>();
         public SelectList DepartmentList { get; set; }
         public SelectList EmployeeList { get; set; }
 
@@ -69,26 +71,48 @@ namespace RazorPagesNew.Pages.ActivitySummaries
             StartDate ??= DateTime.Today.AddMonths(-3);
             EndDate ??= DateTime.Today;
 
-            // Load departments for filtering
-            var departments = await _employeeService.GetAllDepartmentsAsync();
-            DepartmentList = new SelectList(departments, "Id", "Name");
+            // Load all necessary data upfront
+            await LoadDictionariesAsync();
 
-            // Load employees for filtering
-            var employees = await _employeeService.GetAllEmployeesAsync();
-
-            // Filter employees by department if selected
-            if (DepartmentId.HasValue)
+            // Set up department list for filtering
+            var departmentItems = new List<SelectListItem>();
+            foreach (var department in DepartmentDict.Values)
             {
-                employees = employees.Where(e => e.DepartmentId == DepartmentId.Value).ToList();
+                departmentItems.Add(new SelectListItem
+                {
+                    Value = department.Id.ToString(),
+                    Text = department.Name
+                });
             }
+            DepartmentList = new SelectList(departmentItems, "Value", "Text");
 
-            EmployeeList = new SelectList(employees, "Id", "FullName");
+            // Set up employee list for filtering
+            var employeeItems = new List<SelectListItem>();
+            foreach (var employee in EmployeeDict.Values)
+            {
+                // If department filter is applied, only include employees from that department
+                if (!DepartmentId.HasValue || employee.DepartmentId == DepartmentId.Value)
+                {
+                    string departmentName = "";
+                    if (DepartmentDict.ContainsKey(employee.DepartmentId))
+                    {
+                        departmentName = $" ({DepartmentDict[employee.DepartmentId].Name})";
+                    }
+
+                    employeeItems.Add(new SelectListItem
+                    {
+                        Value = employee.Id.ToString(),
+                        Text = employee.FullName + departmentName
+                    });
+                }
+            }
+            EmployeeList = new SelectList(employeeItems, "Value", "Text");
 
             // Fetch summaries with filtering
-            var summariesQuery = await FetchSummariesAsync();
+            var allSummaries = await FetchSummariesAsync();
 
             // Get the total count for pagination
-            TotalSummaries = summariesQuery.Count;
+            TotalSummaries = allSummaries.Count;
 
             // Calculate the total pages
             TotalPages = (int)Math.Ceiling(TotalSummaries / (double)PageSize);
@@ -104,20 +128,29 @@ namespace RazorPagesNew.Pages.ActivitySummaries
             }
 
             // Get the paged summaries
-            Summaries = summariesQuery
+            Summaries = allSummaries
                 .Skip((CurrentPage - 1) * PageSize)
                 .Take(PageSize)
                 .ToList();
 
             // Calculate average scores
-            if (summariesQuery.Any())
+            if (allSummaries.Any())
             {
-                AverageAttendanceScore = summariesQuery.Average(s => s.AttendanceScore);
-                AverageTaskScore = summariesQuery.Average(s => s.TaskScore);
+                double totalAttendanceScore = 0;
+                double totalTaskScore = 0;
+
+                foreach (var summary in allSummaries)
+                {
+                    totalAttendanceScore += summary.AttendanceScore;
+                    totalTaskScore += summary.TaskScore;
+                }
+
+                AverageAttendanceScore = totalAttendanceScore / allSummaries.Count;
+                AverageTaskScore = totalTaskScore / allSummaries.Count;
             }
 
             // Prepare chart data
-            PrepareChartData(summariesQuery);
+            PrepareChartData(allSummaries);
         }
 
         // Handler for deleting a summary
@@ -129,6 +162,10 @@ namespace RazorPagesNew.Pages.ActivitySummaries
                 return NotFound();
             }
 
+            // Load employee information
+            var employee = await _employeeService.GetEmployeeByIdAsync(summary.EmployeeId);
+            string employeeName = employee != null ? employee.FullName : $"ID: {summary.EmployeeId}";
+
             var result = await _evaluationService.DeleteWorkActivitySummaryAsync(id);
             if (result)
             {
@@ -138,7 +175,7 @@ namespace RazorPagesNew.Pages.ActivitySummaries
                     Models.Enums.ActionType.Delete,
                     "WorkActivitySummary",
                     id.ToString(),
-                    $"Удалена сводка активности за период {summary.PeriodStart:dd.MM.yyyy} - {summary.PeriodEnd:dd.MM.yyyy} сотрудника {summary.Employee.FullName}"
+                    $"Удалена сводка активности за период {summary.PeriodStart:dd.MM.yyyy} - {summary.PeriodEnd:dd.MM.yyyy} сотрудника {employeeName}"
                 );
 
                 StatusMessage = "Сводка успешно удалена.";
@@ -182,6 +219,34 @@ namespace RazorPagesNew.Pages.ActivitySummaries
             return Url.Page("./Index", routeValues);
         }
 
+        // Helper method to load all dictionaries for lookup
+        private async Task LoadDictionariesAsync()
+        {
+            // Load all departments
+            var departments = await _employeeService.GetAllDepartmentsAsync();
+            DepartmentDict.Clear();
+            foreach (var department in departments)
+            {
+                DepartmentDict[department.Id] = department;
+            }
+
+            // Load all employees
+            var employees = await _employeeService.GetAllEmployeesAsync();
+            EmployeeDict.Clear();
+            foreach (var employee in employees)
+            {
+                EmployeeDict[employee.Id] = employee;
+            }
+
+            // Load all users
+            var users = await _userService.GetAllUsersAsync();
+            UserDict.Clear();
+            foreach (var user in users)
+            {
+                UserDict[user.Id] = user;
+            }
+        }
+
         // Helper method to fetch summaries with filtering
         private async Task<List<WorkActivitySummary>> FetchSummariesAsync()
         {
@@ -197,7 +262,7 @@ namespace RazorPagesNew.Pages.ActivitySummaries
             else
             {
                 // Get all employees
-                var employees = await _employeeService.GetAllEmployeesAsync();
+                var employees = EmployeeDict.Values.ToList();
 
                 // Filter by department if specified
                 if (DepartmentId.HasValue)
@@ -214,108 +279,253 @@ namespace RazorPagesNew.Pages.ActivitySummaries
             }
 
             // Apply date filters if specified
-            var filteredSummaries = allSummaries;
-
-            if (StartDate.HasValue)
+            var filteredSummaries = new List<WorkActivitySummary>();
+            foreach (var summary in allSummaries)
             {
-                filteredSummaries = filteredSummaries.Where(s => s.PeriodEnd >= StartDate).ToList();
-            }
+                bool includeRecord = true;
 
-            if (EndDate.HasValue)
-            {
-                filteredSummaries = filteredSummaries.Where(s => s.PeriodStart <= EndDate).ToList();
+                if (StartDate.HasValue && summary.PeriodEnd < StartDate.Value)
+                {
+                    includeRecord = false;
+                }
+
+                if (EndDate.HasValue && summary.PeriodStart > EndDate.Value)
+                {
+                    includeRecord = false;
+                }
+
+                if (includeRecord)
+                {
+                    filteredSummaries.Add(summary);
+                }
             }
 
             // Sort by period end date (most recent first)
-            return filteredSummaries.OrderByDescending(s => s.PeriodEnd).ToList();
+            filteredSummaries.Sort((a, b) => b.PeriodEnd.CompareTo(a.PeriodEnd));
+            return filteredSummaries;
         }
 
         // Prepare chart data for the visualizations
         private void PrepareChartData(List<WorkActivitySummary> summaries)
         {
-            if (!summaries.Any())
+            if (summaries.Count == 0)
             {
                 // No data to visualize
                 return;
             }
 
             // Group summaries by period (month/year) for the time-based charts
-            var groupedByPeriod = summaries
-                .GroupBy(s => new { Year = s.PeriodEnd.Year, Month = s.PeriodEnd.Month })
-                .OrderBy(g => g.Key.Year)
-                .ThenBy(g => g.Key.Month)
-                .Select(g => new
+            var periodGroups = new Dictionary<string, List<WorkActivitySummary>>();
+
+            foreach (var summary in summaries)
+            {
+                string periodKey = $"{summary.PeriodEnd.Year}-{summary.PeriodEnd.Month:D2}";
+
+                if (!periodGroups.ContainsKey(periodKey))
                 {
-                    Period = $"{g.Key.Year}-{g.Key.Month:D2}",
-                    Summaries = g.ToList()
-                })
-                .ToList();
+                    periodGroups[periodKey] = new List<WorkActivitySummary>();
+                }
+
+                periodGroups[periodKey].Add(summary);
+            }
+
+            // Sort periods chronologically
+            var sortedPeriods = periodGroups.Keys.ToList();
+            sortedPeriods.Sort();
 
             // Prepare attendance chart data
-            var attendanceData = new
+            var labels = new List<string>();
+            var attendanceDays = new List<double>();
+            var lateArrivals = new List<double>();
+
+            foreach (var period in sortedPeriods)
             {
-                labels = groupedByPeriod.Select(g => g.Period).ToArray(),
-                attendanceDays = groupedByPeriod.Select(g => g.Summaries.Average(s => s.AttendanceDays)).ToArray(),
-                lateArrivals = groupedByPeriod.Select(g => g.Summaries.Average(s => s.LateArrivals)).ToArray()
+                var periodSummaries = periodGroups[period];
+
+                double avgAttendanceDays = 0;
+                double avgLateArrivals = 0;
+
+                foreach (var summary in periodSummaries)
+                {
+                    avgAttendanceDays += summary.AttendanceDays;
+                    avgLateArrivals += summary.LateArrivals;
+                }
+
+                avgAttendanceDays /= periodSummaries.Count;
+                avgLateArrivals /= periodSummaries.Count;
+
+                labels.Add(period);
+                attendanceDays.Add(avgAttendanceDays);
+                lateArrivals.Add(avgLateArrivals);
+            }
+
+            AttendanceChartData = new
+            {
+                labels = labels.ToArray(),
+                attendanceDays = attendanceDays.ToArray(),
+                lateArrivals = lateArrivals.ToArray()
             };
-            AttendanceChartData = attendanceData;
 
             // Prepare task chart data
-            var taskData = new
+            var completedTasks = new List<double>();
+            var efficiency = new List<double>();
+
+            foreach (var period in sortedPeriods)
             {
-                labels = groupedByPeriod.Select(g => g.Period).ToArray(),
-                completedTasks = groupedByPeriod.Select(g => g.Summaries.Average(s => s.CompletedTasks)).ToArray(),
-                efficiency = groupedByPeriod.Select(g => g.Summaries.Average(s => s.AvgTaskEfficiency)).ToArray()
+                var periodSummaries = periodGroups[period];
+
+                double avgCompletedTasks = 0;
+                double avgEfficiency = 0;
+
+                foreach (var summary in periodSummaries)
+                {
+                    avgCompletedTasks += summary.CompletedTasks;
+                    avgEfficiency += summary.AvgTaskEfficiency;
+                }
+
+                avgCompletedTasks /= periodSummaries.Count;
+                avgEfficiency /= periodSummaries.Count;
+
+                completedTasks.Add(avgCompletedTasks);
+                efficiency.Add(avgEfficiency);
+            }
+
+            TaskChartData = new
+            {
+                labels = labels.ToArray(),
+                completedTasks = completedTasks.ToArray(),
+                efficiency = efficiency.ToArray()
             };
-            TaskChartData = taskData;
 
             // Prepare department comparison chart data
             if (DepartmentId == null)
             {
                 // No department selected, show all departments
-                var departmentGroups = summaries
-                    .GroupBy(s => s.Employee.Department.Name)
-                    .Select(g => new
-                    {
-                        DepartmentName = g.Key,
-                        AttendanceScore = g.Average(s => s.AttendanceScore),
-                        TaskScore = g.Average(s => s.TaskScore),
-                        PenaltyScore = g.Average(s => s.PenaltyScore)
-                    })
-                    .ToList();
+                var departmentGroups = new Dictionary<string, List<WorkActivitySummary>>();
 
-                var departmentData = new
+                foreach (var summary in summaries)
                 {
-                    departments = departmentGroups.Select(d => d.DepartmentName).ToArray(),
-                    attendanceScores = departmentGroups.Select(d => d.AttendanceScore).ToArray(),
-                    taskScores = departmentGroups.Select(d => d.TaskScore).ToArray(),
-                    penaltyScores = departmentGroups.Select(d => d.PenaltyScore).ToArray()
+                    string departmentName = "Неизвестный отдел";
+
+                    if (EmployeeDict.ContainsKey(summary.EmployeeId))
+                    {
+                        var employee = EmployeeDict[summary.EmployeeId];
+                        if (DepartmentDict.ContainsKey(employee.DepartmentId))
+                        {
+                            departmentName = DepartmentDict[employee.DepartmentId].Name;
+                        }
+                    }
+
+                    if (!departmentGroups.ContainsKey(departmentName))
+                    {
+                        departmentGroups[departmentName] = new List<WorkActivitySummary>();
+                    }
+
+                    departmentGroups[departmentName].Add(summary);
+                }
+
+                var departmentNames = new List<string>();
+                var attendanceScores = new List<double>();
+                var taskScores = new List<double>();
+                var penaltyScores = new List<double>();
+
+                foreach (var entry in departmentGroups)
+                {
+                    string departmentName = entry.Key;
+                    var departmentSummaries = entry.Value;
+
+                    double avgAttendanceScore = 0;
+                    double avgTaskScore = 0;
+                    double avgPenaltyScore = 0;
+
+                    foreach (var summary in departmentSummaries)
+                    {
+                        avgAttendanceScore += summary.AttendanceScore;
+                        avgTaskScore += summary.TaskScore;
+                        avgPenaltyScore += summary.PenaltyScore;
+                    }
+
+                    avgAttendanceScore /= departmentSummaries.Count;
+                    avgTaskScore /= departmentSummaries.Count;
+                    avgPenaltyScore /= departmentSummaries.Count;
+
+                    departmentNames.Add(departmentName);
+                    attendanceScores.Add(avgAttendanceScore);
+                    taskScores.Add(avgTaskScore);
+                    penaltyScores.Add(avgPenaltyScore);
+                }
+
+                DepartmentChartData = new
+                {
+                    departments = departmentNames.ToArray(),
+                    attendanceScores = attendanceScores.ToArray(),
+                    taskScores = taskScores.ToArray(),
+                    penaltyScores = penaltyScores.ToArray()
                 };
-                DepartmentChartData = departmentData;
             }
             else
             {
                 // Department selected, show employees in that department
-                var employeeGroups = summaries
-                    .Where(s => s.Employee.DepartmentId == DepartmentId)
-                    .GroupBy(s => s.Employee.FullName)
-                    .Select(g => new
-                    {
-                        EmployeeName = g.Key,
-                        AttendanceScore = g.Average(s => s.AttendanceScore),
-                        TaskScore = g.Average(s => s.TaskScore),
-                        PenaltyScore = g.Average(s => s.PenaltyScore)
-                    })
-                    .ToList();
+                var employeeGroups = new Dictionary<string, List<WorkActivitySummary>>();
 
-                var departmentData = new
+                foreach (var summary in summaries)
                 {
-                    departments = employeeGroups.Select(e => e.EmployeeName).ToArray(),
-                    attendanceScores = employeeGroups.Select(e => e.AttendanceScore).ToArray(),
-                    taskScores = employeeGroups.Select(e => e.TaskScore).ToArray(),
-                    penaltyScores = employeeGroups.Select(e => e.PenaltyScore).ToArray()
+                    if (EmployeeDict.ContainsKey(summary.EmployeeId))
+                    {
+                        var employee = EmployeeDict[summary.EmployeeId];
+
+                        if (employee.DepartmentId == DepartmentId.Value)
+                        {
+                            string employeeName = employee.FullName;
+
+                            if (!employeeGroups.ContainsKey(employeeName))
+                            {
+                                employeeGroups[employeeName] = new List<WorkActivitySummary>();
+                            }
+
+                            employeeGroups[employeeName].Add(summary);
+                        }
+                    }
+                }
+
+                var employeeNames = new List<string>();
+                var attendanceScores = new List<double>();
+                var taskScores = new List<double>();
+                var penaltyScores = new List<double>();
+
+                foreach (var entry in employeeGroups)
+                {
+                    string employeeName = entry.Key;
+                    var employeeSummaries = entry.Value;
+
+                    double avgAttendanceScore = 0;
+                    double avgTaskScore = 0;
+                    double avgPenaltyScore = 0;
+
+                    foreach (var summary in employeeSummaries)
+                    {
+                        avgAttendanceScore += summary.AttendanceScore;
+                        avgTaskScore += summary.TaskScore;
+                        avgPenaltyScore += summary.PenaltyScore;
+                    }
+
+                    avgAttendanceScore /= employeeSummaries.Count;
+                    avgTaskScore /= employeeSummaries.Count;
+                    avgPenaltyScore /= employeeSummaries.Count;
+
+                    employeeNames.Add(employeeName);
+                    attendanceScores.Add(avgAttendanceScore);
+                    taskScores.Add(avgTaskScore);
+                    penaltyScores.Add(avgPenaltyScore);
+                }
+
+                DepartmentChartData = new
+                {
+                    departments = employeeNames.ToArray(),
+                    attendanceScores = attendanceScores.ToArray(),
+                    taskScores = taskScores.ToArray(),
+                    penaltyScores = penaltyScores.ToArray()
                 };
-                DepartmentChartData = departmentData;
             }
         }
     }

@@ -20,6 +20,15 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        var statusClass = Model.StatusMessage.Contains("Ошибка") ? "danger" : "success";
+                        <div class="alert alert-@statusClass alert-dismissible fade show" role="alert">
+                            @Model.StatusMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
                     <form method="get" class="mb-4">
                         <div class="row g-2">
                             <div class="col-md-3">
@@ -68,15 +77,31 @@
                                 <tbody>
                                     @foreach (var summary in Model.Summaries)
                                     {
+                                        // Получаем информацию о сотруднике через словарь
+                                        var employeeName = "Сотрудник не найден";
+                                        var departmentName = "Отдел не найден";
+
+                                        if (Model.EmployeeDict.ContainsKey(summary.EmployeeId))
+                                        {
+                                            var employee = Model.EmployeeDict[summary.EmployeeId];
+                                            employeeName = employee.FullName;
+
+                                            if (Model.DepartmentDict.ContainsKey(employee.DepartmentId))
+                                            {
+                                                departmentName = Model.DepartmentDict[employee.DepartmentId].Name;
+                                            }
+                                        }
+
+                                        // Рассчитываем общую оценку
                                         var overallScore = (summary.AttendanceScore * 0.4) + (summary.TaskScore * 0.4) + (summary.PenaltyScore * 0.2);
 
                                         <tr>
                                             <td>
                                                 <a asp-page="/Employees/Details" asp-route-id="@summary.EmployeeId">
-                                                    @summary.Employee.FullName
+                                                    @employeeName
                                                 </a>
                                             </td>
-                                            <td>@summary.Employee.Department.Name</td>
+                                            <td>@departmentName</td>
                                             <td>@summary.PeriodStart.ToShortDateString() - @summary.PeriodEnd.ToShortDateString()</td>
                                             <td>
                                                 <div class="d-flex align-items-center">
@@ -127,7 +152,7 @@
                                                     </a>
                                                     <button type="button" class="btn btn-outline-danger delete-summary"
                                                             data-id="@summary.Id"
-                                                            data-employee="@summary.Employee.FullName"
+                                                            data-employee="@employeeName"
                                                             data-period="@summary.PeriodStart.ToShortDateString() - @summary.PeriodEnd.ToShortDateString()">
                                                         <i class="fas fa-trash"></i>
                                                     </button>

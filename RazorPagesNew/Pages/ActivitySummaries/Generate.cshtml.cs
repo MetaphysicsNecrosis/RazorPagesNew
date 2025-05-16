@@ -16,15 +16,18 @@ namespace RazorPagesNew.Pages.ActivitySummaries
         private readonly IEvaluationService _evaluationService;
         private readonly IEmployeeService _employeeService;
         private readonly IAuditLogService _auditLogService;
+        private readonly IUserService _userService;
 
         public GenerateModel(
             IEvaluationService evaluationService,
             IEmployeeService employeeService,
-            IAuditLogService auditLogService)
+            IAuditLogService auditLogService,
+            IUserService userService)
         {
             _evaluationService = evaluationService;
             _employeeService = employeeService;
             _auditLogService = auditLogService;
+            _userService = userService;
         }
 
         [BindProperty]
@@ -137,7 +140,7 @@ namespace RazorPagesNew.Pages.ActivitySummaries
                     if (newSummary != null)
                     {
                         // Set owner ID (current user)
-                        var currentUserObj = await GetCurrentUserAsync();
+                        var currentUserObj = await _userService.GetCurrentUserAsync(User);
                         if (currentUserObj != null)
                         {
                             newSummary.OwnerId = currentUserObj.Id;
@@ -195,7 +198,7 @@ namespace RazorPagesNew.Pages.ActivitySummaries
             }
         }
 
-        private async Task<User> GetCurrentUserAsync()
+       /* private async Task<User> GetCurrentUserAsync()
         {
             // Get current user based on claims
             var currentUsername = User.Identity.Name;
@@ -204,6 +207,6 @@ namespace RazorPagesNew.Pages.ActivitySummaries
 
             var allUsers = await ((IUserService)HttpContext.RequestServices.GetService(typeof(IUserService))).GetAllUsersAsync();
             return allUsers.FirstOrDefault(u => u.Username == currentUsername);
-        }
+        }*/
     }
 }

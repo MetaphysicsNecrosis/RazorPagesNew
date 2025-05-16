@@ -29,7 +29,19 @@
                                     <i class="fas fa-home me-1"></i> Дашборд
                                 </a>
                             </li>
-
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-white" href="#" id="activityDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-clipboard-list me-1"></i> Активность
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="activityDropdown">
+                                    <li><a class="dropdown-item" asp-page="/Activity/Attendance"><i class="fas fa-calendar-check me-1"></i> Посещаемость</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Activity/Tasks"><i class="fas fa-tasks me-1"></i> Задачи</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Activity/Leaves"><i class="fas fa-umbrella-beach me-1"></i> Отпуска</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" asp-page="/ActivitySummaries/Index"><i class="fas fa-chart-pie me-1"></i> Сводки активности</a></li>
+                                    <li><a class="dropdown-item" asp-page="/ActivitySummaries/Generate"><i class="fas fa-calculator me-1"></i> Генерация сводок</a></li>
+                                </ul>
+                            </li>
                             <!-- Группа Персонал -->
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle text-white" href="#" id="personnelDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -51,6 +63,9 @@
                                     <li><a class="dropdown-item" asp-page="/Activity/Attendance"><i class="fas fa-calendar-check me-1"></i> Посещаемость</a></li>
                                     <li><a class="dropdown-item" asp-page="/Activity/Tasks"><i class="fas fa-tasks me-1"></i> Задачи</a></li>
                                     <li><a class="dropdown-item" asp-page="/Activity/Leaves"><i class="fas fa-umbrella-beach me-1"></i> Отпуска</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" asp-page="/ActivitySummaries/Index"><i class="fas fa-chart-pie me-1"></i> Сводки активности</a></li>
+                                    <li><a class="dropdown-item" asp-page="/ActivitySummaries/Generate"><i class="fas fa-calculator me-1"></i> Генерация сводок</a></li>
                                 </ul>
                             </li>
 

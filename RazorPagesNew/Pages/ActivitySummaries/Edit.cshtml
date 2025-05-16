@@ -1,0 +1,214 @@
+﻿@page "{id:int}"
+@model RazorPagesNew.Pages.ActivitySummaries.EditModel
+@{
+    ViewData["Title"] = "Редактирование сводки активности";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Редактирование сводки активности</h5>
+                    <div>
+                        <a asp-page="./Details" asp-route-id="@Model.Summary.Id" class="btn btn-light btn-sm me-2">
+                            <i class="fas fa-eye"></i> Просмотр
+                        </a>
+                        <a asp-page="./Index" class="btn btn-light btn-sm">
+                            <i class="fas fa-arrow-left"></i> К списку
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        var statusClass = Model.StatusMessage.Contains("Ошибка") ? "danger" : "success";
+                        <div class="alert alert-@statusClass alert-dismissible fade show" role="alert">
+                            @Model.StatusMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <form method="post">
+                        <input type="hidden" asp-for="Summary.Id" />
+                        <input type="hidden" asp-for="Summary.EmployeeId" />
+                        <input type="hidden" asp-for="Summary.CreatedAt" />
+                        <input type="hidden" asp-for="Summary.OwnerId" />
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Информация о сотруднике</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="text-center mb-3">
+                                            @if (!string.IsNullOrEmpty(Model.Employee.PhotoPath))
+                                            {
+                                                <img src="@Model.Employee.PhotoPath" alt="@Model.Employee.FullName"
+                                                     class="img-fluid rounded-circle mb-2" style="max-width: 100px; height: auto;">
+                                            }
+                                            else
+                                            {
+                                                <div class="bg-light rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center"
+                                                     style="width: 100px; height: 100px;">
+                                                    <i class="fas fa-user fa-3x text-secondary"></i>
+                                                </div>
+                                            }
+                                            <h5>@Model.Employee.FullName</h5>
+                                            <p class="text-muted mb-0">@Model.Employee.Position</p>
+                                            <span class="badge bg-primary mt-1">@Model.Employee.Department.Name</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card mt-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Период сводки</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label asp-for="Summary.PeriodStart" class="form-label">Дата начала</label>
+                                                <input asp-for="Summary.PeriodStart" class="form-control" type="date" />
+                                                <span asp-validation-for="Summary.PeriodStart" class="text-danger"></span>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label asp-for="Summary.PeriodEnd" class="form-label">Дата окончания</label>
+                                                <input asp-for="Summary.PeriodEnd" class="form-control" type="date" />
+                                                <span asp-validation-for="Summary.PeriodEnd" class="text-danger"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Показатели эффективности</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="alert alert-info mb-3">
+                                            <i class="fas fa-info-circle me-2"></i> При изменении показателей посещаемости и выполнения задач, оценки будут пересчитаны автоматически.
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <h6 class="border-bottom pb-2 mb-3">Посещаемость</h6>
+                                            <div class="row">
+                                                <div class="col-md-4 mb-3">
+                                                    <label asp-for="Summary.AttendanceDays" class="form-label">Дней присутствия</label>
+                                                    <input asp-for="Summary.AttendanceDays" class="form-control" type="number" min="0" />
+                                                    <span asp-validation-for="Summary.AttendanceDays" class="text-danger"></span>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <label asp-for="Summary.LateArrivals" class="form-label">Опозданий</label>
+                                                    <input asp-for="Summary.LateArrivals" class="form-control" type="number" min="0" />
+                                                    <span asp-validation-for="Summary.LateArrivals" class="text-danger"></span>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <label asp-for="Summary.TotalHoursWorked" class="form-label">Рабочие часы</label>
+                                                    <input asp-for="Summary.TotalHoursWorked" class="form-control" type="number" min="0" step="0.5" />
+                                                    <span asp-validation-for="Summary.TotalHoursWorked" class="text-danger"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <h6 class="border-bottom pb-2 mb-3">Задачи</h6>
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label asp-for="Summary.CompletedTasks" class="form-label">Выполнено задач</label>
+                                                    <input asp-for="Summary.CompletedTasks" class="form-control" type="number" min="0" />
+                                                    <span asp-validation-for="Summary.CompletedTasks" class="text-danger"></span>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label asp-for="Summary.AvgTaskEfficiency" class="form-label">Средняя эффективность</label>
+                                                    <input asp-for="Summary.AvgTaskEfficiency" class="form-control" type="number" min="0" max="100" step="0.1" />
+                                                    <span asp-validation-for="Summary.AvgTaskEfficiency" class="text-danger"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <h6 class="border-bottom pb-2 mb-3">Отпуска</h6>
+                                            <div class="row">
+                                                <div class="col-md-4 mb-3">
+                                                    <label asp-for="Summary.TotalLeaveDays" class="form-label">Всего дней</label>
+                                                    <input asp-for="Summary.TotalLeaveDays" class="form-control" type="number" min="0" />
+                                                    <span asp-validation-for="Summary.TotalLeaveDays" class="text-danger"></span>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <label asp-for="Summary.VacationDays" class="form-label">Отпуск</label>
+                                                    <input asp-for="Summary.VacationDays" class="form-control" type="number" min="0" />
+                                                    <span asp-validation-for="Summary.VacationDays" class="text-danger"></span>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <label asp-for="Summary.SickDays" class="form-label">Больничный</label>
+                                                    <input asp-for="Summary.SickDays" class="form-control" type="number" min="0" />
+                                                    <span asp-validation-for="Summary.SickDays" class="text-danger"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Итоговые оценки</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4 mb-3">
+                                                <label asp-for="Summary.AttendanceScore" class="form-label">Оценка посещаемости</label>
+                                                <input asp-for="Summary.AttendanceScore" class="form-control" type="number" min="0" max="100" step="0.1" />
+                                                <span asp-validation-for="Summary.AttendanceScore" class="text-danger"></span>
+                                                <small class="form-text text-muted">Оценка от 0 до 100 баллов</small>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label asp-for="Summary.TaskScore" class="form-label">Оценка выполнения задач</label>
+                                                <input asp-for="Summary.TaskScore" class="form-control" type="number" min="0" max="100" step="0.1" />
+                                                <span asp-validation-for="Summary.TaskScore" class="text-danger"></span>
+                                                <small class="form-text text-muted">Оценка от 0 до 100 баллов</small>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label asp-for="Summary.PenaltyScore" class="form-label">Оценка дисциплины</label>
+                                                <input asp-for="Summary.PenaltyScore" class="form-control" type="number" min="0" max="100" step="0.1" />
+                                                <span asp-validation-for="Summary.PenaltyScore" class="text-danger"></span>
+                                                <small class="form-text text-muted">Оценка от 0 до 100 баллов</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="recalculateScores" name="RecalculateScores" checked>
+                                                <label class="form-check-label" for="recalculateScores">
+                                                    Пересчитать оценки автоматически на основе показателей
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-page="./Details" asp-route-id="@Model.Summary.Id" class="btn btn-secondary">Отмена</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Сохранить изменения
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

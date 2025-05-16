@@ -1,0 +1,554 @@
+﻿@page "{id:int}"
+@model RazorPagesNew.Pages.ActivitySummaries.DetailsModel
+@{
+    ViewData["Title"] = "Детали сводки активности";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Подробная информация о сводке активности</h5>
+                    <div>
+                        <a asp-page="./Edit" asp-route-id="@Model.Summary.Id" class="btn btn-light btn-sm me-2">
+                            <i class="fas fa-edit"></i> Редактировать
+                        </a>
+                        <a asp-page="./Index" class="btn btn-light btn-sm">
+                            <i class="fas fa-arrow-left"></i> Назад к списку
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Информация о сотруднике</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-center mb-3">
+                                        @if (!string.IsNullOrEmpty(Model.Summary.Employee.PhotoPath))
+                                        {
+                                            <img src="@Model.Summary.Employee.PhotoPath" alt="@Model.Summary.Employee.FullName"
+                                                 class="img-fluid rounded-circle mb-2" style="max-width: 100px; height: auto;">
+                                        }
+                                        else
+                                        {
+                                            <div class="bg-light rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center"
+                                                 style="width: 100px; height: 100px;">
+                                                <i class="fas fa-user fa-3x text-secondary"></i>
+                                            </div>
+                                        }
+                                        <h5>@Model.Summary.Employee.FullName</h5>
+                                        <p class="text-muted mb-0">@Model.Summary.Employee.Position</p>
+                                        <span class="badge bg-primary mt-1">@Model.Summary.Employee.Department.Name</span>
+                                    </div>
+
+                                    <dl class="row mt-3 mb-0">
+                                        <dt class="col-sm-5">Email:</dt>
+                                        <dd class="col-sm-7"><a href="mailto:@Model.Summary.Employee.Email">@Model.Summary.Employee.Email</a></dd>
+
+                                        <dt class="col-sm-5">Телефон:</dt>
+                                        <dd class="col-sm-7"><a href="tel:@Model.Summary.Employee.Phone">@Model.Summary.Employee.Phone</a></dd>
+
+                                        <dt class="col-sm-5">В компании:</dt>
+                                        <dd class="col-sm-7">
+                                            @{
+                                                var workDuration = (DateTime.UtcNow - Model.Summary.Employee.HireDate).TotalDays;
+                                                var years = Math.Floor(workDuration / 365);
+                                                var months = Math.Floor((workDuration % 365) / 30);
+                                            }
+                                            @(years > 0 ? $"{years} г. " : "")@(months > 0 ? $"{months} мес." : "< 1 мес.")
+                                        </dd>
+                                    </dl>
+                                </div>
+                                <div class="card-footer bg-white text-center">
+                                    <a asp-page="/Employees/Details" asp-route-id="@Model.Summary.EmployeeId" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-user me-1"></i> Профиль сотрудника
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Детали сводки</h6>
+                                </div>
+                                <div class="card-body">
+                                    <dl class="row mb-0">
+                                        <dt class="col-sm-5">Период:</dt>
+                                        <dd class="col-sm-7">@Model.Summary.PeriodStart.ToShortDateString() - @Model.Summary.PeriodEnd.ToShortDateString()</dd>
+
+                                        <dt class="col-sm-5">Дней охвата:</dt>
+                                        <dd class="col-sm-7">@((Model.Summary.PeriodEnd - Model.Summary.PeriodStart).Days + 1)</dd>
+
+                                        <dt class="col-sm-5">Рабочих дней:</dt>
+                                        <dd class="col-sm-7">@Model.WorkingDaysInPeriod</dd>
+
+                                        <dt class="col-sm-5">Создана:</dt>
+                                        <dd class="col-sm-7">@Model.Summary.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd>
+
+                                        @if (Model.Summary.UpdatedAt.HasValue)
+                                        {
+                                            <dt class="col-sm-5">Обновлена:</dt>
+                                            <dd class="col-sm-7">@Model.Summary.UpdatedAt.Value.ToString("dd.MM.yyyy HH:mm")</dd>
+                                        }
+
+                                        <dt class="col-sm-5">Автор:</dt>
+                                        <dd class="col-sm-7">@Model.Summary.Owner.Username</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Оценка эффективности</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-center mb-4">
+                                        <div class="display-4 mb-0 @(Model.OverallScore >= 70 ? "text-success" : (Model.OverallScore >= 50 ? "text-warning" : "text-danger"))">
+                                            @Model.OverallScore.ToString("F1")
+                                        </div>
+                                        <div class="progress mt-2" style="height: 10px;">
+                                            <div class="progress-bar @(Model.OverallScore >= 70 ? "bg-success" : (Model.OverallScore >= 50 ? "bg-warning" : "bg-danger"))"
+                                                 role="progressbar"
+                                                 style="width: @(Model.OverallScore)%"
+                                                 aria-valuenow="@(Model.OverallScore)"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100"></div>
+                                        </div>
+                                        <p class="text-muted small mt-2">
+                                            Итоговый балл эффективности
+                                        </p>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span>Посещаемость (40%)</span>
+                                            <span>@Model.Summary.AttendanceScore.ToString("F1")</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-info" role="progressbar"
+                                                 style="width: @(Model.Summary.AttendanceScore)%"
+                                                 aria-valuenow="@Model.Summary.AttendanceScore"
+                                                 aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span>Выполнение задач (40%)</span>
+                                            <span>@Model.Summary.TaskScore.ToString("F1")</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-success" role="progressbar"
+                                                 style="width: @(Model.Summary.TaskScore)%"
+                                                 aria-valuenow="@Model.Summary.TaskScore"
+                                                 aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span>Дисциплина (20%)</span>
+                                            <span>@Model.Summary.PenaltyScore.ToString("F1")</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-warning" role="progressbar"
+                                                 style="width: @(Model.Summary.PenaltyScore)%"
+                                                 aria-valuenow="@Model.Summary.PenaltyScore"
+                                                 aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Детальная информация о показателях -->
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Посещаемость и рабочее время</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-4">
+                                            <div class="card border-info h-100">
+                                                <div class="card-body text-center">
+                                                    <h2 class="text-info">@Model.Summary.AttendanceDays</h2>
+                                                    <p class="mb-0">дней присутствия</p>
+                                                </div>
+                                                <div class="card-footer bg-light text-center">
+                                                    <small class="text-muted">
+                                                        @(((double)Model.Summary.AttendanceDays / Model.WorkingDaysInPeriod * 100).ToString("F0"))% от рабочих дней
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card border-warning h-100">
+                                                <div class="card-body text-center">
+                                                    <h2 class="text-warning">@Model.Summary.LateArrivals</h2>
+                                                    <p class="mb-0">опозданий</p>
+                                                </div>
+                                                <div class="card-footer bg-light text-center">
+                                                    <small class="text-muted">
+                                                        @(Model.Summary.AttendanceDays > 0 ? ((double)Model.Summary.LateArrivals / Model.Summary.AttendanceDays * 100).ToString("F0") : "0")% дней
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card border-primary h-100">
+                                                <div class="card-body text-center">
+                                                    <h2 class="text-primary">@Model.Summary.TotalHoursWorked.ToString("F1")</h2>
+                                                    <p class="mb-0">рабочих часов</p>
+                                                </div>
+                                                <div class="card-footer bg-light text-center">
+                                                    <small class="text-muted">
+                                                        @(Model.Summary.AttendanceDays > 0 ? (Model.Summary.TotalHoursWorked / Model.Summary.AttendanceDays).ToString("F1") : "0") ч. в день
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <h6 class="border-bottom pb-2 mb-3">Сравнение с другими сотрудниками отдела</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th></th>
+                                                        <th>У сотрудника</th>
+                                                        <th>Средний в отделе</th>
+                                                        <th>Лучший в отделе</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>Дни присутствия</td>
+                                                        <td>@Model.Summary.AttendanceDays</td>
+                                                        <td>@Model.DepartmentAvgAttendanceDays.ToString("F1")</td>
+                                                        <td>@Model.DepartmentMaxAttendanceDays</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Опоздания</td>
+                                                        <td>@Model.Summary.LateArrivals</td>
+                                                        <td>@Model.DepartmentAvgLateArrivals.ToString("F1")</td>
+                                                        <td>@Model.DepartmentMinLateArrivals</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Рабочие часы</td>
+                                                        <td>@Model.Summary.TotalHoursWorked.ToString("F1")</td>
+                                                        <td>@Model.DepartmentAvgHoursWorked.ToString("F1")</td>
+                                                        <td>@Model.DepartmentMaxHoursWorked.ToString("F1")</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Задачи и эффективность</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-4">
+                                            <div class="card border-success h-100">
+                                                <div class="card-body text-center">
+                                                    <h2 class="text-success">@Model.Summary.CompletedTasks</h2>
+                                                    <p class="mb-0">выполненных задач</p>
+                                                </div>
+                                                <div class="card-footer bg-light text-center">
+                                                    <small class="text-muted">
+                                                        @(Model.Summary.AttendanceDays > 0 ? ((double)Model.Summary.CompletedTasks / Model.Summary.AttendanceDays).ToString("F1") : "0") задач в день
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card border-info h-100">
+                                                <div class="card-body text-center">
+                                                    <h2 class="text-info">@Model.Summary.AvgTaskEfficiency.ToString("F1")</h2>
+                                                    <p class="mb-0">эффективность</p>
+                                                </div>
+                                                <div class="card-footer bg-light text-center">
+                                                    <small class="text-muted">
+                                                        средний показатель по задачам
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card border-success h-100">
+                                                <div class="card-body text-center">
+                                                    <h2 class="text-success">@Model.Summary.TaskScore.ToString("F1")</h2>
+                                                    <p class="mb-0">общая оценка</p>
+                                                </div>
+                                                <div class="card-footer bg-light text-center">
+                                                    <small class="text-muted">
+                                                        @(Model.Summary.TaskScore >= 70 ? "Отлично" : (Model.Summary.TaskScore >= 50 ? "Хорошо" : "Требует улучшения"))
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <h6 class="border-bottom pb-2 mb-3">Сравнение с другими сотрудниками отдела</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th></th>
+                                                        <th>У сотрудника</th>
+                                                        <th>Средний в отделе</th>
+                                                        <th>Лучший в отделе</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>Выполнено задач</td>
+                                                        <td>@Model.Summary.CompletedTasks</td>
+                                                        <td>@Model.DepartmentAvgCompletedTasks.ToString("F1")</td>
+                                                        <td>@Model.DepartmentMaxCompletedTasks</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Эффективность</td>
+                                                        <td>@Model.Summary.AvgTaskEfficiency.ToString("F1")</td>
+                                                        <td>@Model.DepartmentAvgTaskEfficiency.ToString("F1")</td>
+                                                        <td>@Model.DepartmentMaxTaskEfficiency.ToString("F1")</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Оценка задач</td>
+                                                        <td>@Model.Summary.TaskScore.ToString("F1")</td>
+                                                        <td>@Model.DepartmentAvgTaskScore.ToString("F1")</td>
+                                                        <td>@Model.DepartmentMaxTaskScore.ToString("F1")</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Отпуска и больничные -->
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Отпуска и больничные</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card bg-light mb-3">
+                                                <div class="card-body">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span>Всего дней отсутствия:</span>
+                                                        <span class="badge bg-primary">@Model.Summary.TotalLeaveDays</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card mb-3">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">Отпуск</h5>
+                                                    <h3 class="text-success">@Model.Summary.VacationDays</h3>
+                                                    <p class="card-text">дней</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card bg-light mb-3">
+                                                <div class="card-body">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span>% времени присутствия:</span>
+                                                        <span class="badge bg-success">@(((double)(Model.WorkingDaysInPeriod - Model.Summary.TotalLeaveDays) / Model.WorkingDaysInPeriod * 100).ToString("F0"))%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">Больничный</h5>
+                                                    <h3 class="text-warning">@Model.Summary.SickDays</h3>
+                                                    <p class="card-text">дней</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Динамика показателей сотрудника</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="employeePerformanceChart" height="250"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Связанные оценки сотрудника -->
+                    @if (Model.RelatedEvaluations.Any())
+                    {
+                        <div class="row">
+                            <div class="col-12 mb-4">
+                                <div class="card">
+                                    <div class="card-header bg-secondary text-white">
+                                        <h6 class="mb-0">Оценки сотрудника за этот период</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Дата оценки</th>
+                                                        <th>Оценка</th>
+                                                        <th>Кто оценивал</th>
+                                                        <th>Комментарий</th>
+                                                        <th>Действия</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var evaluation in Model.RelatedEvaluations)
+                                                    {
+                                                        <tr>
+                                                            <td>@evaluation.EvaluationDate.ToShortDateString()</td>
+                                                            <td>
+                                                                <div class="d-flex align-items-center">
+                                                                    <span class="me-2">@evaluation.Score.ToString("F1")</span>
+                                                                    <div class="progress flex-grow-1" style="height: 8px;">
+                                                                        <div class="progress-bar @(evaluation.Score >= 70 ? "bg-success" : (evaluation.Score >= 50 ? "bg-warning" : "bg-danger"))"
+                                                                             role="progressbar"
+                                                                             style="width: @(evaluation.Score)%"
+                                                                             aria-valuenow="@(evaluation.Score)"
+                                                                             aria-valuemin="0"
+                                                                             aria-valuemax="100"></div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td>@evaluation.Evaluator.Username</td>
+                                                            <td>
+                                                                @if (!string.IsNullOrEmpty(evaluation.Notes))
+                                                                {
+                                                                    @if (evaluation.Notes.Length > 50)
+                                                                    {
+                                                                        @(evaluation.Notes.Substring(0, 50) + "...")
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        @evaluation.Notes
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="text-muted">Нет комментария</span>
+                                                                }
+                                                            </td>
+                                                            <td>
+                                                                <a asp-page="/Evaluations/Details" asp-route-id="@evaluation.Id" class="btn btn-outline-primary btn-sm">
+                                                                    <i class="fas fa-eye"></i>
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a asp-page="./Index" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> К списку сводок
+                        </a>
+                        <div>
+                            <a href="#" onclick="window.print();" class="btn btn-outline-primary me-2">
+                                <i class="fas fa-print me-1"></i> Печать
+                            </a>
+                            <a asp-page="./Edit" asp-route-id="@Model.Summary.Id" class="btn btn-primary">
+                                <i class="fas fa-edit me-1"></i> Редактировать
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Данные для графика динамики показателей сотрудника
+            const performanceData = @Html.Raw(Json.Serialize(Model.PerformanceChartData));
+
+            // Инициализация графика
+            const ctx = document.getElementById('employeePerformanceChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: performanceData.labels,
+                    datasets: [
+                        {
+                            label: 'Посещаемость',
+                            data: performanceData.attendanceScores,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 2,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Задачи',
+                            data: performanceData.taskScores,
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Общая оценка',
+                            data: performanceData.overallScores,
+                            backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                            borderColor: 'rgba(255, 159, 64, 1)',
+                            borderWidth: 2,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+}
