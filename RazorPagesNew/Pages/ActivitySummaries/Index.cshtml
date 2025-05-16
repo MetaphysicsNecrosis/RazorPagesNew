@@ -1,0 +1,462 @@
+﻿@page
+@model RazorPagesNew.Pages.ActivitySummaries.IndexModel
+@{
+    ViewData["Title"] = "Сводки рабочей активности";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Сводки рабочей активности</h5>
+                    <div>
+                        <a asp-page="./Generate" class="btn btn-light btn-sm me-2">
+                            <i class="fas fa-calculator me-1"></i> Сгенерировать сводки
+                        </a>
+                        <a asp-page="./Create" class="btn btn-light btn-sm">
+                            <i class="fas fa-plus me-1"></i> Новая сводка
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="mb-4">
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <label for="departmentId" class="form-label">Отдел</label>
+                                <select class="form-select" id="departmentId" name="departmentId" asp-items="Model.DepartmentList">
+                                    <option value="">Все отделы</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="employeeId" class="form-label">Сотрудник</label>
+                                <select class="form-select" id="employeeId" name="employeeId" asp-items="Model.EmployeeList">
+                                    <option value="">Все сотрудники</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="startDate" class="form-label">Дата начала</label>
+                                <input type="date" class="form-control" id="startDate" name="startDate" value="@Model.StartDate?.ToString("yyyy-MM-dd")">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="endDate" class="form-label">Дата окончания</label>
+                                <input type="date" class="form-control" id="endDate" name="endDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-filter me-1"></i> Фильтровать
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    @if (Model.Summaries.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Сотрудник</th>
+                                        <th>Отдел</th>
+                                        <th>Период</th>
+                                        <th>Посещаемость</th>
+                                        <th>Задачи</th>
+                                        <th>Общая оценка</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var summary in Model.Summaries)
+                                    {
+                                        var overallScore = (summary.AttendanceScore * 0.4) + (summary.TaskScore * 0.4) + (summary.PenaltyScore * 0.2);
+
+                                        <tr>
+                                            <td>
+                                                <a asp-page="/Employees/Details" asp-route-id="@summary.EmployeeId">
+                                                    @summary.Employee.FullName
+                                                </a>
+                                            </td>
+                                            <td>@summary.Employee.Department.Name</td>
+                                            <td>@summary.PeriodStart.ToShortDateString() - @summary.PeriodEnd.ToShortDateString()</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="me-2">@summary.AttendanceScore.ToString("F1")</span>
+                                                    <div class="progress flex-grow-1" style="height: 8px;">
+                                                        <div class="progress-bar bg-info"
+                                                             role="progressbar"
+                                                             style="width: @(summary.AttendanceScore)%"
+                                                             aria-valuenow="@(summary.AttendanceScore)"
+                                                             aria-valuemin="0"
+                                                             aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="me-2">@summary.TaskScore.ToString("F1")</span>
+                                                    <div class="progress flex-grow-1" style="height: 8px;">
+                                                        <div class="progress-bar bg-success"
+                                                             role="progressbar"
+                                                             style="width: @(summary.TaskScore)%"
+                                                             aria-valuenow="@(summary.TaskScore)"
+                                                             aria-valuemin="0"
+                                                             aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="me-2">@overallScore.ToString("F1")</span>
+                                                    <div class="progress flex-grow-1" style="height: 8px;">
+                                                        <div class="progress-bar @(overallScore >= 70 ? "bg-success" : (overallScore >= 50 ? "bg-warning" : "bg-danger"))"
+                                                             role="progressbar"
+                                                             style="width: @(overallScore)%"
+                                                             aria-valuenow="@(overallScore)"
+                                                             aria-valuemin="0"
+                                                             aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a asp-page="./Details" asp-route-id="@summary.Id" class="btn btn-outline-primary">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a asp-page="./Edit" asp-route-id="@summary.Id" class="btn btn-outline-secondary">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-outline-danger delete-summary"
+                                                            data-id="@summary.Id"
+                                                            data-employee="@summary.Employee.FullName"
+                                                            data-period="@summary.PeriodStart.ToShortDateString() - @summary.PeriodEnd.ToShortDateString()">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Пагинация -->
+                        @if (Model.TotalPages > 1)
+                        {
+                            <nav aria-label="Page navigation" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    @if (Model.CurrentPage > 1)
+                                    {
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Model.GetPageUrl(1)" aria-label="First">
+                                                <span aria-hidden="true">&laquo;&laquo;</span>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Model.GetPageUrl(Model.CurrentPage - 1)" aria-label="Previous">
+                                                <span aria-hidden="true">&laquo;</span>
+                                            </a>
+                                        </li>
+                                    }
+
+                                    @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
+                                    {
+                                        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                            <a class="page-link" href="@Model.GetPageUrl(i)">@i</a>
+                                        </li>
+                                    }
+
+                                    @if (Model.CurrentPage < Model.TotalPages)
+                                    {
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Model.GetPageUrl(Model.CurrentPage + 1)" aria-label="Next">
+                                                <span aria-hidden="true">&raquo;</span>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Model.GetPageUrl(Model.TotalPages)" aria-label="Last">
+                                                <span aria-hidden="true">&raquo;&raquo;</span>
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </nav>
+                        }
+
+                        <!-- Статистика -->
+                        <div class="alert alert-light mt-4">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <h5>@Model.Summaries.Count()</h5>
+                                    <small class="text-muted">сводок отображено</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <h5>@Model.TotalSummaries</h5>
+                                    <small class="text-muted">всего сводок</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <h5>@Model.AverageAttendanceScore.ToString("F1")</h5>
+                                    <small class="text-muted">средняя посещаемость</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <h5>@Model.AverageTaskScore.ToString("F1")</h5>
+                                    <small class="text-muted">средняя эффективность</small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> Сводки не найдены. Попробуйте изменить параметры фильтрации или
+                            <a asp-page="./Generate" class="alert-link">сгенерировать новые сводки</a>.
+                        </div>
+                    }
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a asp-page="/Dashboard/Index" class="btn btn-outline-secondary">
+                            <i class="fas fa-home me-1"></i> На дашборд
+                        </a>
+                        <a asp-page="./Generate" class="btn btn-primary">
+                            <i class="fas fa-calculator me-1"></i> Сгенерировать сводки
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Графики анализа сводок -->
+    @if (Model.Summaries.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Анализ посещаемости</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="attendanceChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Анализ выполнения задач</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="taskChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Сравнительный анализ отделов</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="departmentComparisonChart" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Модальное окно подтверждения удаления -->
+<div class="modal fade" id="deleteSummaryModal" tabindex="-1" aria-labelledby="deleteSummaryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Delete">
+                <input type="hidden" id="deleteSummaryId" name="id" />
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteSummaryModalLabel">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Вы уверены, что хотите удалить сводку за период <strong id="deleteSummaryPeriod"></strong> сотрудника <strong id="deleteSummaryEmployee"></strong>?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Внимание!</strong> Это действие нельзя будет отменить. Если к этой сводке привязаны оценки сотрудника, они также будут удалены.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Удалить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Обработка клика по кнопке удаления
+            $('.delete-summary').click(function() {
+                const id = $(this).data('id');
+                const employee = $(this).data('employee');
+                const period = $(this).data('period');
+
+                $('#deleteSummaryId').val(id);
+                $('#deleteSummaryEmployee').text(employee);
+                $('#deleteSummaryPeriod').text(period);
+
+                $('#deleteSummaryModal').modal('show');
+            });
+
+            // Инициализация графиков
+        @if (Model.Summaries.Any())
+        {
+            <text>
+                        // График посещаемости
+                        const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+                        const attendanceData = @Html.Raw(Json.Serialize(Model.AttendanceChartData));
+
+                        new Chart(attendanceCtx, {
+                            type: 'line',
+                            data: {
+                                labels: attendanceData.labels,
+                                datasets: [
+                                    {
+                                        label: 'Дни присутствия',
+                                        data: attendanceData.attendanceDays,
+                                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                        borderColor: 'rgba(75, 192, 192, 1)',
+                                        borderWidth: 2,
+                                        tension: 0.1
+                                    },
+                                    {
+                                        label: 'Опоздания',
+                                        data: attendanceData.lateArrivals,
+                                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                        borderColor: 'rgba(255, 99, 132, 1)',
+                                        borderWidth: 2,
+                                        tension: 0.1
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+
+                        // График задач
+                        const taskCtx = document.getElementById('taskChart').getContext('2d');
+                        const taskData = @Html.Raw(Json.Serialize(Model.TaskChartData));
+
+                        new Chart(taskCtx, {
+                            type: 'line',
+                            data: {
+                                labels: taskData.labels,
+                                datasets: [
+                                    {
+                                        label: 'Выполненные задачи',
+                                        data: taskData.completedTasks,
+                                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                        borderColor: 'rgba(54, 162, 235, 1)',
+                                        borderWidth: 2,
+                                        tension: 0.1,
+                                        yAxisID: 'y'
+                                    },
+                                    {
+                                        label: 'Эффективность (%)',
+                                        data: taskData.efficiency,
+                                        backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                                        borderColor: 'rgba(255, 159, 64, 1)',
+                                        borderWidth: 2,
+                                        tension: 0.1,
+                                        yAxisID: 'y1'
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: {
+                                    y: {
+                                        type: 'linear',
+                                        display: true,
+                                        position: 'left',
+                                        beginAtZero: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Количество задач'
+                                        }
+                                    },
+                                    y1: {
+                                        type: 'linear',
+                                        display: true,
+                                        position: 'right',
+                                        beginAtZero: true,
+                                        max: 100,
+                                        title: {
+                                            display: true,
+                                            text: 'Эффективность (%)'
+                                        },
+                                        grid: {
+                                            drawOnChartArea: false
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                        // График сравнения отделов
+                        const deptCtx = document.getElementById('departmentComparisonChart').getContext('2d');
+                        const deptData = @Html.Raw(Json.Serialize(Model.DepartmentChartData));
+
+                        new Chart(deptCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: deptData.departments,
+                                datasets: [
+                                    {
+                                        label: 'Посещаемость',
+                                        data: deptData.attendanceScores,
+                                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                                        borderColor: 'rgba(75, 192, 192, 1)',
+                                        borderWidth: 1
+                                    },
+                                    {
+                                        label: 'Эффективность задач',
+                                        data: deptData.taskScores,
+                                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                        borderColor: 'rgba(54, 162, 235, 1)',
+                                        borderWidth: 1
+                                    },
+                                    {
+                                        label: 'Дисциплина',
+                                        data: deptData.penaltyScores,
+                                        backgroundColor: 'rgba(255, 159, 64, 0.5)',
+                                        borderColor: 'rgba(255, 159, 64, 1)',
+                                        borderWidth: 1
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        max: 100
+                                    }
+                                }
+                            }
+                        });
+            </text>
+        }
+        });
+    </script>
+}
