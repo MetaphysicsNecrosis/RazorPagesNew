@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using NuGet.Protocol.Providers;
 using RazorPagesNew.Data;
 using RazorPagesNew.Models.Enums;
 using RazorPagesNew.ModelsDb;
@@ -300,7 +301,7 @@ namespace RazorPagesNew.Services.Implementation
 
         #region Расчеты и аналитика
 
-        public async Task<WorkActivitySummary> GenerateWorkActivitySummaryAsync(int employeeId, DateTime startDate, DateTime endDate)
+        public async Task<WorkActivitySummary> GenerateWorkActivitySummaryAsync(int employeeId, DateTime startDate, DateTime endDate, int ownerId)
         {
             // Загружаем необходимые данные для расчета
             var attendanceRecords = await _context.AttendanceRecords
@@ -340,6 +341,7 @@ namespace RazorPagesNew.Services.Implementation
                 AvgTaskEfficiency = taskRecords.Any(t => t.EfficiencyScore.HasValue)
                     ? taskRecords.Where(t => t.EfficiencyScore.HasValue).Average(t => t.EfficiencyScore.Value)
                     : 0,
+                OwnerId = ownerId
             };
 
             // Рассчитываем оценочные показатели

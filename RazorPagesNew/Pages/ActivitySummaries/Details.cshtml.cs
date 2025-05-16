@@ -1,202 +1,110 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using RazorPagesNew.ModelsDb;
-using RazorPagesNew.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using RazorPagesNew.ModelsDb;
 
 namespace RazorPagesNew.Pages.ActivitySummaries
 {
     public class DetailsModel : PageModel
     {
-        private readonly IEvaluationService _evaluationService;
-        private readonly IEmployeeService _employeeService;
-        private readonly IAuditLogService _auditLogService;
+        private readonly MyApplicationDbContext _context;
 
-        public DetailsModel(
-            IEvaluationService evaluationService,
-            IEmployeeService employeeService,
-            IAuditLogService auditLogService)
+        public DetailsModel(MyApplicationDbContext context)
         {
-            _evaluationService = evaluationService;
-            _employeeService = employeeService;
-            _auditLogService = auditLogService;
+            _context = context;
         }
 
-        public WorkActivitySummary Summary { get; set; }
-        public IEnumerable<EmployeeEvaluation> RelatedEvaluations { get; set; }
+        public WorkActivitySummary ActivitySummary { get; set; }
+        public string EmployeeFullName { get; set; }
+        public string EmployeePosition { get; set; }
+        public string DepartmentName { get; set; }
+        public string OwnerUsername { get; set; }
+        public List<AttendanceRecord> RelatedAttendanceRecords { get; set; }
+        public List<TaskRecord> RelatedTaskRecords { get; set; }
+        public List<LeaveRecord> RelatedLeaveRecords { get; set; }
         public int WorkingDaysInPeriod { get; set; }
-        
-        // Overall score calculated from the summary
-        public double OverallScore { get; set; }
-        
-        // Department statistics for comparison
-        public double DepartmentAvgAttendanceDays { get; set; }
-        public int DepartmentMaxAttendanceDays { get; set; }
-        public double DepartmentAvgLateArrivals { get; set; }
-        public int DepartmentMinLateArrivals { get; set; }
-        public double DepartmentAvgHoursWorked { get; set; }
-        public double DepartmentMaxHoursWorked { get; set; }
-        
-        public double DepartmentAvgCompletedTasks { get; set; }
-        public int DepartmentMaxCompletedTasks { get; set; }
-        public double DepartmentAvgTaskEfficiency { get; set; }
-        public double DepartmentMaxTaskEfficiency { get; set; }
-        public double DepartmentAvgTaskScore { get; set; }
-        public double DepartmentMaxTaskScore { get; set; }
-        
-        // Chart data for employee performance trends
-        public object PerformanceChartData { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(int id)
+        // Данные для графиков
+        public Dictionary<string, double> AttendanceChartData { get; set; }
+        public Dictionary<string, double> TaskEfficiencyChartData { get; set; }
+
+        public async Task<IActionResult> OnGetAsync(int? id)
         {
-            // Get summary details
-            Summary = await _evaluationService.GetWorkActivitySummaryByIdAsync(id);
-            if (Summary == null)
+            if (id == null)
             {
                 return NotFound();
             }
 
-            // Calculate overall score
-            OverallScore = (Summary.AttendanceScore * 0.4) + (Summary.TaskScore * 0.4) + (Summary.PenaltyScore * 0.2);
+            // Получаем основную сводку активности без навигационных свойств
+            ActivitySummary = await _context.WorkActivitySummaries.FindAsync(id);
 
-            // Calculate working days in period
-            WorkingDaysInPeriod = CountWorkingDays(Summary.PeriodStart, Summary.PeriodEnd);
+            if (ActivitySummary == null)
+            {
+                return NotFound();
+            }
 
-            // Get related evaluations
-            var allEvaluations = await _evaluationService.GetEvaluationsByEmployeeIdAsync(Summary.EmployeeId);
-            RelatedEvaluations = allEvaluations
-                .Where(e => e.SummaryId == Summary.Id)
-                .OrderByDescending(e => e.EvaluationDate)
-                .ToList();
+            // Получаем данные о сотруднике без навигационных свойств
+            var employeeData = await _context.Employees
+                .Where(e => e.Id == ActivitySummary.EmployeeId)
+                .Select(e => new { e.FullName, e.Position, e.DepartmentId })
+                .FirstOrDefaultAsync();
 
-            // Load department statistics for comparison
-            await LoadDepartmentStatistics();
+            if (employeeData != null)
+            {
+                EmployeeFullName = employeeData.FullName;
+                EmployeePosition = employeeData.Position;
 
-            // Prepare chart data for performance trends
-            await PreparePerformanceChartData();
+                // Получаем название отдела
+                DepartmentName = await _context.Departments
+                    .Where(d => d.Id == employeeData.DepartmentId)
+                    .Select(d => d.Name)
+                    .FirstOrDefaultAsync();
+            }
+
+            // Получаем имя пользователя, создавшего сводку
+            OwnerUsername = await _context.Users
+                .Where(u => u.Id == ActivitySummary.OwnerId)
+                .Select(u => u.Username)
+                .FirstOrDefaultAsync();
+
+            // Получаем связанные записи посещаемости
+            RelatedAttendanceRecords = await _context.AttendanceRecords
+                .Where(a => a.EmployeeId == ActivitySummary.EmployeeId &&
+                           a.Date >= ActivitySummary.PeriodStart &&
+                           a.Date <= ActivitySummary.PeriodEnd)
+                .OrderByDescending(a => a.Date)
+                .Take(10)
+                .ToListAsync();
+
+            // Получаем связанные записи задач
+            RelatedTaskRecords = await _context.TaskRecords
+                .Where(t => t.EmployeeId == ActivitySummary.EmployeeId &&
+                           t.CompletedAt >= ActivitySummary.PeriodStart &&
+                           t.CompletedAt <= ActivitySummary.PeriodEnd)
+                .OrderByDescending(t => t.CompletedAt)
+                .Take(10)
+                .ToListAsync();
+
+            // Получаем связанные записи об отпусках
+            RelatedLeaveRecords = await _context.LeaveRecords
+                .Where(l => l.EmployeeId == ActivitySummary.EmployeeId &&
+                           ((l.StartDate >= ActivitySummary.PeriodStart && l.StartDate <= ActivitySummary.PeriodEnd) ||
+                            (l.EndDate >= ActivitySummary.PeriodStart && l.EndDate <= ActivitySummary.PeriodEnd) ||
+                            (l.StartDate <= ActivitySummary.PeriodStart && l.EndDate >= ActivitySummary.PeriodEnd)))
+                .OrderByDescending(l => l.StartDate)
+                .ToListAsync();
+
+            // Расчет количества рабочих дней в периоде
+            WorkingDaysInPeriod = CountWorkingDays(ActivitySummary.PeriodStart, ActivitySummary.PeriodEnd);
+
+            // Подготовка данных для графиков
+            PrepareChartData();
 
             return Page();
-        }
-
-        private async Task LoadDepartmentStatistics()
-        {
-            // Get department ID of the employee
-            var departmentId = Summary.Employee.DepartmentId;
-
-            // Get all employees in the same department
-            var departmentEmployees = await _employeeService.GetEmployeesByDepartmentAsync(departmentId);
-            
-            // Get summaries for all department employees in a similar period
-            var departmentSummaries = new List<WorkActivitySummary>();
-            foreach (var employee in departmentEmployees)
-            {
-                if (employee.Id == Summary.EmployeeId)
-                    continue; // Skip the current employee
-
-                var employeeSummaries = await _evaluationService.GetWorkActivitySummariesByEmployeeIdAsync(employee.Id);
-                
-                // Find summaries with overlapping periods
-                var relevantSummaries = employeeSummaries
-                    .Where(s => (s.PeriodStart <= Summary.PeriodEnd && s.PeriodEnd >= Summary.PeriodStart) ||
-                               (s.PeriodStart >= Summary.PeriodStart && s.PeriodStart <= Summary.PeriodEnd) ||
-                               (s.PeriodEnd >= Summary.PeriodStart && s.PeriodEnd <= Summary.PeriodEnd))
-                    .ToList();
-                
-                departmentSummaries.AddRange(relevantSummaries);
-            }
-
-            // Calculate attendance statistics
-            if (departmentSummaries.Any())
-            {
-                // Attendance days
-                DepartmentAvgAttendanceDays = departmentSummaries.Average(s => s.AttendanceDays);
-                DepartmentMaxAttendanceDays = departmentSummaries.Max(s => s.AttendanceDays);
-
-                // Late arrivals (lower is better)
-                DepartmentAvgLateArrivals = departmentSummaries.Average(s => s.LateArrivals);
-                DepartmentMinLateArrivals = departmentSummaries.Min(s => s.LateArrivals);
-
-                // Hours worked
-                DepartmentAvgHoursWorked = departmentSummaries.Average(s => s.TotalHoursWorked);
-                DepartmentMaxHoursWorked = departmentSummaries.Max(s => s.TotalHoursWorked);
-
-                // Task statistics
-                DepartmentAvgCompletedTasks = departmentSummaries.Average(s => s.CompletedTasks);
-                DepartmentMaxCompletedTasks = departmentSummaries.Max(s => s.CompletedTasks);
-                DepartmentAvgTaskEfficiency = departmentSummaries.Average(s => s.AvgTaskEfficiency);
-                DepartmentMaxTaskEfficiency = departmentSummaries.Max(s => s.AvgTaskEfficiency);
-                DepartmentAvgTaskScore = departmentSummaries.Average(s => s.TaskScore);
-                DepartmentMaxTaskScore = departmentSummaries.Max(s => s.TaskScore);
-            }
-            else
-            {
-                // If no other employees in department or no relevant summaries,
-                // set comparison values to this employee's values
-                DepartmentAvgAttendanceDays = Summary.AttendanceDays;
-                DepartmentMaxAttendanceDays = Summary.AttendanceDays;
-                DepartmentAvgLateArrivals = Summary.LateArrivals;
-                DepartmentMinLateArrivals = Summary.LateArrivals;
-                DepartmentAvgHoursWorked = Summary.TotalHoursWorked;
-                DepartmentMaxHoursWorked = Summary.TotalHoursWorked;
-                DepartmentAvgCompletedTasks = Summary.CompletedTasks;
-                DepartmentMaxCompletedTasks = Summary.CompletedTasks;
-                DepartmentAvgTaskEfficiency = Summary.AvgTaskEfficiency;
-                DepartmentMaxTaskEfficiency = Summary.AvgTaskEfficiency;
-                DepartmentAvgTaskScore = Summary.TaskScore;
-                DepartmentMaxTaskScore = Summary.TaskScore;
-            }
-        }
-
-        private async Task PreparePerformanceChartData()
-        {
-            // Get all summaries for this employee to show trends
-            var allSummaries = await _evaluationService.GetWorkActivitySummariesByEmployeeIdAsync(Summary.EmployeeId);
-            
-            // Order by period end date
-            var orderedSummaries = allSummaries
-                .OrderBy(s => s.PeriodEnd)
-                .ToList();
-
-            if (orderedSummaries.Count <= 1)
-            {
-                // Not enough data for a trend chart, use current summary as a single data point
-                PerformanceChartData = new
-                {
-                    labels = new[] { $"{Summary.PeriodStart:MM/yyyy} - {Summary.PeriodEnd:MM/yyyy}" },
-                    attendanceScores = new[] { Summary.AttendanceScore },
-                    taskScores = new[] { Summary.TaskScore },
-                    overallScores = new[] { OverallScore }
-                };
-                return;
-            }
-
-            // Prepare chart data
-            var labels = new List<string>();
-            var attendanceScores = new List<double>();
-            var taskScores = new List<double>();
-            var overallScores = new List<double>();
-
-            foreach (var summary in orderedSummaries)
-            {
-                labels.Add($"{summary.PeriodStart:MM/yyyy} - {summary.PeriodEnd:MM/yyyy}");
-                attendanceScores.Add(summary.AttendanceScore);
-                taskScores.Add(summary.TaskScore);
-                
-                // Calculate overall score for each summary
-                var overall = (summary.AttendanceScore * 0.4) + (summary.TaskScore * 0.4) + (summary.PenaltyScore * 0.2);
-                overallScores.Add(overall);
-            }
-
-            PerformanceChartData = new
-            {
-                labels = labels.ToArray(),
-                attendanceScores = attendanceScores.ToArray(),
-                taskScores = taskScores.ToArray(),
-                overallScores = overallScores.ToArray()
-            };
         }
 
         private int CountWorkingDays(DateTime startDate, DateTime endDate)
@@ -210,6 +118,58 @@ namespace RazorPagesNew.Pages.ActivitySummaries
                 }
             }
             return workingDays;
+        }
+
+        private void PrepareChartData()
+        {
+            // Данные для графика посещаемости
+            AttendanceChartData = new Dictionary<string, double>
+            {
+                { "Присутствовал", ActivitySummary.AttendanceDays },
+                { "Отсутствовал", WorkingDaysInPeriod - ActivitySummary.AttendanceDays },
+                { "Отпуск", ActivitySummary.VacationDays },
+                { "Больничный", ActivitySummary.SickDays }
+            };
+
+            // Данные для графика эффективности задач
+            TaskEfficiencyChartData = new Dictionary<string, double>
+            {
+                { "Выполненные задачи", ActivitySummary.CompletedTasks },
+                { "Эффективность задач", ActivitySummary.AvgTaskEfficiency },
+                { "Общий показатель задач", ActivitySummary.TaskScore }
+            };
+        }
+
+        // Вспомогательные методы для форматирования
+        public string GetLeaveTypeName(int type)
+        {
+            return type switch
+            {
+                1 => "Отпуск",
+                2 => "Больничный",
+                3 => "Отгул",
+                4 => "Административный",
+                _ => "Другое"
+            };
+        }
+
+        public string GetImportanceLevel(int importance)
+        {
+            return importance switch
+            {
+                1 => "Низкая",
+                2 => "Средняя",
+                3 => "Высокая",
+                4 => "Критическая",
+                _ => "Не определена"
+            };
+        }
+
+        public string GetScoreClass(double score)
+        {
+            return score >= 70 ? "success" :
+                   score >= 50 ? "warning" :
+                   "danger";
         }
     }
 }

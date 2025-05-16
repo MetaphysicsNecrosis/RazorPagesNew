@@ -134,8 +134,9 @@ namespace RazorPagesNew.Pages.ActivitySummaries
                         }
                     }
 
+                    var currUser = await _userService.GetCurrentUserAsync(User);
                     // Generate new summary
-                    var newSummary = await _evaluationService.GenerateWorkActivitySummaryAsync(employeeId, StartDate, EndDate);
+                    var newSummary = await _evaluationService.GenerateWorkActivitySummaryAsync(employeeId, StartDate, EndDate, currUser.Id);
 
                     if (newSummary != null)
                     {

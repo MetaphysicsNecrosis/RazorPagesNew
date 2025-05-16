@@ -95,21 +95,25 @@ namespace RazorPagesNew.Pages.Evaluations
                 return RedirectToPage("/Account/Login");
 
             // Проверяем валидность модели
-            if (!ModelState.IsValid)
+           /* if (!ModelState.IsValid)
             {
                 await PopulateEmployeeList();
                 await LoadEvaluationCriteria();
                 return Page();
-            }
+            }*/
 
             try
             {
+                var userCurr = await _userService.GetCurrentUserAsync(User);
                 // Генерируем сводку активности за указанный период
                 Summary.EmployeeId = Evaluation.EmployeeId;
                 var generatedSummary = await _evaluationService.GenerateWorkActivitySummaryAsync(
                     Evaluation.EmployeeId,
                     Summary.PeriodStart,
-                    Summary.PeriodEnd);
+                    Summary.PeriodEnd,
+                    userCurr.Id
+                    
+                    );
 
                 // Сохраняем сводку
                 var savedSummary = await _evaluationService.CreateWorkActivitySummaryAsync(generatedSummary);
@@ -117,6 +121,8 @@ namespace RazorPagesNew.Pages.Evaluations
                 // Связываем оценку со сводкой
                 Evaluation.SummaryId = savedSummary.Id;
 
+                Evaluation.EvaluatorId = userCurr.Id;
+                Evaluation.OwnerId = userCurr.Id;
                 // Сохраняем оценку
                 var savedEvaluation = await _evaluationService.CreateEvaluationAsync(Evaluation);
 
@@ -128,6 +134,7 @@ namespace RazorPagesNew.Pages.Evaluations
                         EvaluationId = savedEvaluation.Id,
                         CriterionId = criteriaScore.CriterionId,
                         Score = criteriaScore.Score
+                  
                     };
 
                     await _evaluationService.CreateScoreAsync(score);

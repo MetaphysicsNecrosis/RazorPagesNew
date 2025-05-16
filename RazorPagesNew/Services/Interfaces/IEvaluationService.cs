@@ -34,7 +34,7 @@ namespace RazorPagesNew.Services.Interfaces
         Task<bool> DeleteWorkActivitySummaryAsync(int id);
 
         // Расчеты и аналитика
-        Task<WorkActivitySummary> GenerateWorkActivitySummaryAsync(int employeeId, DateTime startDate, DateTime endDate);
+        Task<WorkActivitySummary> GenerateWorkActivitySummaryAsync(int employeeId, DateTime startDate, DateTime endDate, int ownerId);
         Task<double> CalculateOverallScoreAsync(int employeeId, DateTime? startDate = null, DateTime? endDate = null);
     }
 }

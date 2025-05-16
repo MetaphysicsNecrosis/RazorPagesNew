@@ -67,10 +67,10 @@
                                         <tr>
                                             <td>
                                                 <a asp-page="/Employees/Details" asp-route-id="@evaluation.EmployeeId">
-                                                    @evaluation.Employee.FullName
+                                                    @evaluation.EmployeeFullName
                                                 </a>
                                             </td>
-                                            <td>@evaluation.Employee.Department.Name</td>
+                                            <td>@evaluation.DepartmentName</td>
                                             <td>@evaluation.EvaluationDate.ToShortDateString()</td>
                                             <td>
                                                 <div class="d-flex align-items-center">
@@ -85,7 +85,7 @@
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td>@evaluation.Evaluator.Username</td>
+                                            <td>@evaluation.EvaluatorUsername</td>
                                             <td>
                                                 <div class="btn-group btn-group-sm">
                                                     <a asp-page="./Details" asp-route-id="@evaluation.Id" class="btn btn-outline-primary">
@@ -96,7 +96,7 @@
                                                     </a>
                                                     <button type="button" class="btn btn-outline-danger delete-evaluation"
                                                             data-id="@evaluation.Id"
-                                                            data-employee="@evaluation.Employee.FullName">
+                                                            data-employee="@evaluation.EmployeeFullName">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>
@@ -195,7 +195,7 @@
     </div>
 
     <!-- График распределения оценок по отделам -->
-    @if (Model.Evaluations.Any())
+    @if (Model.Evaluations.Any() && Model.DepartmentChartData != null)
     {
         <div class="row mb-4">
             <div class="col-12">
@@ -257,50 +257,53 @@
             });
 
             // Инициализация графика распределения оценок по отделам
-        @if (Model.Evaluations.Any())
+        @if (Model.Evaluations.Any() && Model.DepartmentChartData != null)
         {
             <text>
-                    const ctx = document.getElementById('departmentChart').getContext('2d');
-                    const departmentData = @Html.Raw(Json.Serialize(Model.DepartmentChartData1));
+                        const ctx = document.getElementById('departmentChart').getContext('2d');
+                        const labels = @Html.Raw(Json.Serialize(Model.DepartmentChartData["labels"]));
+                        const averageData = @Html.Raw(Json.Serialize(Model.DepartmentChartData["averages"]));
+                        const maximumData = @Html.Raw(Json.Serialize(Model.DepartmentChartData["maximums"]));
+                        const minimumData = @Html.Raw(Json.Serialize(Model.DepartmentChartData["minimums"]));
 
-                    new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: departmentData.labels,
-                            datasets: [
-                                {
-                                    label: 'Средняя оценка',
-                                    data: departmentData.averages,
-                                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                                    borderColor: 'rgba(75, 192, 192, 1)',
-                                    borderWidth: 1
-                                },
-                                {
-                                    label: 'Максимальная оценка',
-                                    data: departmentData.maximums,
-                                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                                    borderColor: 'rgba(54, 162, 235, 1)',
-                                    borderWidth: 1
-                                },
-                                {
-                                    label: 'Минимальная оценка',
-                                    data: departmentData.minimums,
-                                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                                    borderColor: 'rgba(255, 99, 132, 1)',
-                                    borderWidth: 1
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    max: 100
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [
+                                    {
+                                        label: 'Средняя оценка',
+                                        data: averageData,
+                                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                                        borderColor: 'rgba(75, 192, 192, 1)',
+                                        borderWidth: 1
+                                    },
+                                    {
+                                        label: 'Максимальная оценка',
+                                        data: maximumData,
+                                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                        borderColor: 'rgba(54, 162, 235, 1)',
+                                        borderWidth: 1
+                                    },
+                                    {
+                                        label: 'Минимальная оценка',
+                                        data: minimumData,
+                                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                                        borderColor: 'rgba(255, 99, 132, 1)',
+                                        borderWidth: 1
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        max: 100
+                                    }
                                 }
                             }
-                        }
-                    });
+                        });
             </text>
         }
         });

@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using RazorPagesNew.ModelsDb;
-using RazorPagesNew.Services.Interfaces;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,30 +11,30 @@ namespace RazorPagesNew.Pages.Evaluations
 {
     public class IndexModel : PageModel
     {
-        private readonly IEvaluationService _evaluationService;
-        private readonly IEmployeeService _employeeService;
-        private readonly IUserService _userService;
-        private readonly int _pageSize = 10;
+        private readonly MyApplicationDbContext _context;
 
-        public IndexModel(
-            IEvaluationService evaluationService,
-            IEmployeeService employeeService,
-            IUserService userService)
+        public IndexModel(MyApplicationDbContext context)
         {
-            _evaluationService = evaluationService;
-            _employeeService = employeeService;
-            _userService = userService;
+            _context = context;
         }
 
-        public List<EmployeeEvaluation> Evaluations { get; set; } = new List<EmployeeEvaluation>();
-        public SelectList DepartmentList { get; set; }
-        public SelectList EvaluatorList { get; set; }
-        public int CurrentPage { get; set; } = 1;
-        public int TotalPages { get; set; }
+        public class EvaluationListItem
+        {
+            public int Id { get; set; }
+            public int EmployeeId { get; set; }
+            public string EmployeeFullName { get; set; }
+            public string DepartmentName { get; set; }
+            public DateTime EvaluationDate { get; set; }
+            public double Score { get; set; }
+            public string EvaluatorUsername { get; set; }
+        }
+
+        public IList<EvaluationListItem> Evaluations { get; set; }
         public int TotalEvaluations { get; set; }
         public double AverageScore { get; set; }
         public DateTime? LatestEvaluationDate { get; set; }
-        public DepartmentChartData DepartmentChartData1 { get; set; } = new DepartmentChartData();
+        public SelectList DepartmentList { get; set; }
+        public SelectList EvaluatorList { get; set; }
 
         [BindProperty(SupportsGet = true)]
         public int? DepartmentId { get; set; }
@@ -49,184 +49,231 @@ namespace RazorPagesNew.Pages.Evaluations
         public DateTime? EndDate { get; set; }
 
         [BindProperty(SupportsGet = true)]
-        public int Page { get; set; } = 1;
+        public int CurrentPage { get; set; } = 1;
 
-        [TempData]
-        public string StatusMessage { get; set; }
+        public int PageSize { get; set; } = 10;
+        public int TotalPages { get; set; }
 
-        public async Task<IActionResult> OnGetAsync()
+        // Данные для графика по отделам
+        public Dictionary<string, object> DepartmentChartData { get; set; }
+
+        public async Task OnGetAsync()
         {
-            // Проверка аутентификации
-            if (!User.Identity.IsAuthenticated)
-                return RedirectToPage("/Account/Login");
+            // Получаем списки для фильтров без навигационных свойств
+            var departments = await _context.Departments
+                .OrderBy(d => d.Name)
+                .Select(d => new { d.Id, d.Name })
+                .ToListAsync();
 
-            // Получаем текущего пользователя
-            var currentUser = await _userService.GetCurrentUserAsync(User);
-            if (currentUser == null)
-                return RedirectToPage("/Account/Login");
+            DepartmentList = new SelectList(departments, "Id", "Name");
 
-            // Загружаем все оценки
-            var allEvaluations = await _evaluationService.GetAllEvaluationsAsync();
+            var evaluators = await _context.Users
+                .OrderBy(u => u.Username)
+                .Select(u => new { u.Id, Name = u.Username })
+                .ToListAsync();
+
+            EvaluatorList = new SelectList(evaluators, "Id", "Name");
+
+            // Подготовка запроса с учетом фильтров, но без навигационных свойств
+            var query = _context.EmployeeEvaluations.AsQueryable();
 
             // Применяем фильтры
-            var filteredEvaluations = ApplyFilters(allEvaluations);
+            if (DepartmentId.HasValue)
+            {
+                // Здесь нам нужно сначала получить ID сотрудников выбранного отдела
+                var employeeIds = await _context.Employees
+                    .Where(e => e.DepartmentId == DepartmentId.Value)
+                    .Select(e => e.Id)
+                    .ToListAsync();
 
-            // Подсчитываем общую статистику
-            CalculateStatistics(filteredEvaluations);
+                query = query.Where(e => employeeIds.Contains(e.EmployeeId));
+            }
 
-            // Разбиваем на страницы
-            CurrentPage = Page < 1 ? 1 : Page;
-            TotalEvaluations = filteredEvaluations.Count();
-            TotalPages = (int)Math.Ceiling(TotalEvaluations / (double)_pageSize);
+            if (EvaluatorId.HasValue)
+            {
+                query = query.Where(e => e.EvaluatorId == EvaluatorId.Value);
+            }
 
-            // Получаем элементы для текущей страницы
-            Evaluations = filteredEvaluations
-                .Skip((CurrentPage - 1) * _pageSize)
-                .Take(_pageSize)
-                .ToList();
+            if (StartDate.HasValue)
+            {
+                query = query.Where(e => e.EvaluationDate >= StartDate.Value);
+            }
 
-            // Подготавливаем данные для выпадающих списков
-            await PrepareDropdowns();
+            if (EndDate.HasValue)
+            {
+                query = query.Where(e => e.EvaluationDate <= EndDate.Value);
+            }
 
-            // Подготавливаем данные для графика
-            PrepareChartData(filteredEvaluations);
+            // Получаем общее количество оценок и вычисляем пагинацию
+            TotalEvaluations = await query.CountAsync();
+            TotalPages = (int)Math.Ceiling(TotalEvaluations / (double)PageSize);
 
-            return Page();
+            if (CurrentPage < 1) CurrentPage = 1;
+            if (CurrentPage > TotalPages && TotalPages > 0) CurrentPage = TotalPages;
+
+            // Рассчитываем среднюю оценку и последнюю дату оценки
+            if (TotalEvaluations > 0)
+            {
+                AverageScore = await query.AverageAsync(e => e.Score);
+                LatestEvaluationDate = await query.MaxAsync(e => e.EvaluationDate);
+            }
+
+            // Загружаем данные оценок с пагинацией
+            var evaluationIds = await query
+                .OrderByDescending(e => e.EvaluationDate)
+                .Skip((CurrentPage - 1) * PageSize)
+                .Take(PageSize)
+                .Select(e => e.Id)
+                .ToListAsync();
+
+            // Для каждой оценки загружаем необходимые данные без навигационных свойств
+            var evaluationItems = new List<EvaluationListItem>();
+
+            foreach (var id in evaluationIds)
+            {
+                var evaluation = await _context.EmployeeEvaluations
+                    .Where(e => e.Id == id)
+                    .Select(e => new
+                    {
+                        e.Id,
+                        e.EmployeeId,
+                        e.EvaluationDate,
+                        e.Score,
+                        e.EvaluatorId
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (evaluation != null)
+                {
+                    // Загружаем данные о сотруднике
+                    var employee = await _context.Employees
+                        .Where(e => e.Id == evaluation.EmployeeId)
+                        .Select(e => new { e.FullName, e.DepartmentId })
+                        .FirstOrDefaultAsync();
+
+                    // Загружаем данные об отделе
+                    string departmentName = "";
+                    if (employee != null)
+                    {
+                        departmentName = await _context.Departments
+                            .Where(d => d.Id == employee.DepartmentId)
+                            .Select(d => d.Name)
+                            .FirstOrDefaultAsync() ?? "";
+                    }
+
+                    // Загружаем данные об оценивающем
+                    var evaluatorUsername = await _context.Users
+                        .Where(u => u.Id == evaluation.EvaluatorId)
+                        .Select(u => u.Username)
+                        .FirstOrDefaultAsync() ?? "";
+
+                    // Создаем объект для отображения
+                    evaluationItems.Add(new EvaluationListItem
+                    {
+                        Id = evaluation.Id,
+                        EmployeeId = evaluation.EmployeeId,
+                        EmployeeFullName = employee?.FullName ?? "Неизвестно",
+                        DepartmentName = departmentName,
+                        EvaluationDate = evaluation.EvaluationDate,
+                        Score = evaluation.Score,
+                        EvaluatorUsername = evaluatorUsername
+                    });
+                }
+            }
+
+            Evaluations = evaluationItems;
+
+            // Подготовка данных для графика по отделам
+            await PrepareChartDataAsync();
+        }
+
+        private async Task PrepareChartDataAsync()
+        {
+            // Получаем статистику по отделам без навигационных свойств
+            var departments = await _context.Departments
+                .OrderBy(d => d.Name)
+                .Select(d => new { d.Id, d.Name })
+                .ToListAsync();
+
+            var departmentLabels = new List<string>();
+            var departmentAverages = new List<double>();
+            var departmentMaximums = new List<double>();
+            var departmentMinimums = new List<double>();
+
+            foreach (var dept in departments)
+            {
+                // Получаем ID сотрудников этого отдела
+                var employeeIds = await _context.Employees
+                    .Where(e => e.DepartmentId == dept.Id)
+                    .Select(e => e.Id)
+                    .ToListAsync();
+
+                // Получаем статистику оценок для этих сотрудников
+                var evaluations = await _context.EmployeeEvaluations
+                    .Where(e => employeeIds.Contains(e.EmployeeId))
+                    .Select(e => e.Score)
+                    .ToListAsync();
+
+                if (evaluations.Any())
+                {
+                    departmentLabels.Add(dept.Name);
+                    departmentAverages.Add(Math.Round(evaluations.Average(), 1));
+                    departmentMaximums.Add(Math.Round(evaluations.Max(), 1));
+                    departmentMinimums.Add(Math.Round(evaluations.Min(), 1));
+                }
+            }
+
+            DepartmentChartData = new Dictionary<string, object>
+            {
+                { "labels", departmentLabels },
+                { "averages", departmentAverages },
+                { "maximums", departmentMaximums },
+                { "minimums", departmentMinimums }
+            };
+        }
+
+        public string GetPageUrl(int pageIndex)
+        {
+            var pageParams = new Dictionary<string, string>
+            {
+                { "pageIndex", pageIndex.ToString() }
+            };
+
+            if (DepartmentId.HasValue)
+            {
+                pageParams.Add("departmentId", DepartmentId.Value.ToString());
+            }
+
+            if (EvaluatorId.HasValue)
+            {
+                pageParams.Add("evaluatorId", EvaluatorId.Value.ToString());
+            }
+
+            if (StartDate.HasValue)
+            {
+                pageParams.Add("startDate", StartDate.Value.ToString("yyyy-MM-dd"));
+            }
+
+            if (EndDate.HasValue)
+            {
+                pageParams.Add("endDate", EndDate.Value.ToString("yyyy-MM-dd"));
+            }
+
+            // Формируем строку запроса
+            return Url.Page("./Index", pageParams);
         }
 
         public async Task<IActionResult> OnPostDeleteAsync(int id)
         {
-            // Проверка аутентификации
-            if (!User.Identity.IsAuthenticated)
-                return RedirectToPage("/Account/Login");
+            var evaluation = await _context.EmployeeEvaluations.FindAsync(id);
 
-            try
+            if (evaluation != null)
             {
-                // Удаляем оценку
-                var result = await _evaluationService.DeleteEvaluationAsync(id);
-
-                if (result)
-                {
-                    StatusMessage = "Оценка успешно удалена.";
-                }
-                else
-                {
-                    StatusMessage = "Ошибка при удалении оценки.";
-                }
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Ошибка: {ex.Message}";
+                _context.EmployeeEvaluations.Remove(evaluation);
+                await _context.SaveChangesAsync();
             }
 
             return RedirectToPage();
-        }
-
-        private IEnumerable<EmployeeEvaluation> ApplyFilters(IEnumerable<EmployeeEvaluation> evaluations)
-        {
-            var filtered = evaluations;
-
-            // Фильтр по отделу
-            if (DepartmentId.HasValue && DepartmentId.Value > 0)
-            {
-                filtered = filtered.Where(e => e.Employee.DepartmentId == DepartmentId.Value);
-            }
-
-            // Фильтр по оценивающему
-            if (EvaluatorId.HasValue && EvaluatorId.Value > 0)
-            {
-                filtered = filtered.Where(e => e.EvaluatorId == EvaluatorId.Value);
-            }
-
-            // Фильтр по дате начала
-            if (StartDate.HasValue)
-            {
-                filtered = filtered.Where(e => e.EvaluationDate >= StartDate.Value);
-            }
-
-            // Фильтр по дате окончания
-            if (EndDate.HasValue)
-            {
-                filtered = filtered.Where(e => e.EvaluationDate <= EndDate.Value);
-            }
-
-            return filtered.OrderByDescending(e => e.EvaluationDate);
-        }
-
-        private void CalculateStatistics(IEnumerable<EmployeeEvaluation> evaluations)
-        {
-            if (evaluations.Any())
-            {
-                AverageScore = evaluations.Average(e => e.Score);
-                LatestEvaluationDate = evaluations.Max(e => e.EvaluationDate);
-            }
-            else
-            {
-                AverageScore = 0;
-                LatestEvaluationDate = null;
-            }
-        }
-
-        private async Task PrepareDropdowns()
-        {
-            // Список отделов
-            var departments = await _employeeService.GetAllDepartmentsAsync();
-            DepartmentList = new SelectList(departments, "Id", "Name");
-
-            // Список оценивающих (пользователей с ролью оценивающего)
-            var evaluators = await _userService.GetUsersInRoleAsync("Evaluator");
-            if (!evaluators.Any())
-            {
-                // Если нет пользователей с ролью "Evaluator", берем всех пользователей
-                evaluators = await _userService.GetAllUsersAsync();
-            }
-            EvaluatorList = new SelectList(evaluators, "Id", "Username");
-        }
-
-        private void PrepareChartData(IEnumerable<EmployeeEvaluation> evaluations)
-        {
-            // Группируем оценки по отделам
-            var departmentGroups = evaluations
-                .GroupBy(e => e.Employee.Department.Name)
-                .Select(g => new
-                {
-                    Department = g.Key,
-                    Evaluations = g.ToList(),
-                    AverageScore = g.Average(e => e.Score),
-                    MaxScore = g.Max(e => e.Score),
-                    MinScore = g.Min(e => e.Score)
-                })
-                .OrderByDescending(g => g.AverageScore)
-                .ToList();
-
-            // Формируем данные для графика
-            DepartmentChartData1 = new DepartmentChartData
-            {
-                Labels = departmentGroups.Select(g => g.Department).ToList(),
-                Averages = departmentGroups.Select(g => g.AverageScore).ToList(),
-                Maximums = departmentGroups.Select(g => g.MaxScore).ToList(),
-                Minimums = departmentGroups.Select(g => g.MinScore).ToList()
-            };
-        }
-
-        public string GetPageUrl(int pageNumber)
-        {
-            return Url.Page("./Index", new
-            {
-                departmentId = DepartmentId,
-                evaluatorId = EvaluatorId,
-                startDate = StartDate?.ToString("yyyy-MM-dd"),
-                endDate = EndDate?.ToString("yyyy-MM-dd"),
-                page = pageNumber
-            });
-        }
-
-        public class DepartmentChartData
-        {
-            public List<string> Labels { get; set; } = new List<string>();
-            public List<double> Averages { get; set; } = new List<double>();
-            public List<double> Maximums { get; set; } = new List<double>();
-            public List<double> Minimums { get; set; } = new List<double>();
         }
     }
 }

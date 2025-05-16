@@ -28,9 +28,9 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="text-center mb-3">
-                                        @if (!string.IsNullOrEmpty(Model.Evaluation.Employee.PhotoPath))
+                                        @if (!string.IsNullOrEmpty(Model.Evaluation.PhotoPath))
                                         {
-                                            <img src="@Model.Evaluation.Employee.PhotoPath" alt="@Model.Evaluation.Employee.FullName"
+                                            <img src="@Model.Evaluation.PhotoPath" alt="@Model.Evaluation.EmployeeFullName"
                                                  class="img-fluid rounded-circle mb-2" style="max-width: 100px; height: auto;">
                                         }
                                         else
@@ -40,22 +40,22 @@
                                                 <i class="fas fa-user fa-3x text-secondary"></i>
                                             </div>
                                         }
-                                        <h5>@Model.Evaluation.Employee.FullName</h5>
-                                        <p class="text-muted mb-0">@Model.Evaluation.Employee.Position</p>
-                                        <span class="badge bg-primary mt-1">@Model.Evaluation.Employee.Department.Name</span>
+                                        <h5>@Model.Evaluation.EmployeeFullName</h5>
+                                        <p class="text-muted mb-0">@Model.Evaluation.EmployeePosition</p>
+                                        <span class="badge bg-primary mt-1">@Model.Evaluation.DepartmentName</span>
                                     </div>
 
                                     <dl class="row mt-3 mb-0">
                                         <dt class="col-sm-5">Email:</dt>
-                                        <dd class="col-sm-7"><a href="mailto:@Model.Evaluation.Employee.Email">@Model.Evaluation.Employee.Email</a></dd>
+                                        <dd class="col-sm-7"><a href="mailto:@Model.Evaluation.EmployeeEmail">@Model.Evaluation.EmployeeEmail</a></dd>
 
                                         <dt class="col-sm-5">Телефон:</dt>
-                                        <dd class="col-sm-7"><a href="tel:@Model.Evaluation.Employee.Phone">@Model.Evaluation.Employee.Phone</a></dd>
+                                        <dd class="col-sm-7"><a href="tel:@Model.Evaluation.EmployeePhone">@Model.Evaluation.EmployeePhone</a></dd>
 
                                         <dt class="col-sm-5">В компании:</dt>
                                         <dd class="col-sm-7">
                                             @{
-                                                var workDuration = (DateTime.UtcNow - Model.Evaluation.Employee.HireDate).TotalDays;
+                                                var workDuration = (DateTime.UtcNow - Model.Evaluation.EmployeeHireDate).TotalDays;
                                                 var years = Math.Floor(workDuration / 365);
                                                 var months = Math.Floor((workDuration % 365) / 30);
                                             }
@@ -78,11 +78,11 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="text-center mb-4">
-                                        <div class="display-4 mb-0 @(Model.Evaluation.Score >= 70 ? "text-success" : (Model.Evaluation.Score >= 50 ? "text-warning" : "text-danger"))">
+                                        <div class="display-4 mb-0 text-@Model.GetScoreClass(Model.Evaluation.Score)">
                                             @Model.Evaluation.Score.ToString("F1")
                                         </div>
                                         <div class="progress mt-2" style="height: 10px;">
-                                            <div class="progress-bar @(Model.Evaluation.Score >= 70 ? "bg-success" : (Model.Evaluation.Score >= 50 ? "bg-warning" : "bg-danger"))"
+                                            <div class="progress-bar bg-@Model.GetScoreClass(Model.Evaluation.Score)"
                                                  role="progressbar"
                                                  style="width: @(Model.Evaluation.Score)%"
                                                  aria-valuenow="@(Model.Evaluation.Score)"
@@ -90,7 +90,7 @@
                                                  aria-valuemax="100"></div>
                                         </div>
                                         <p class="text-muted small mt-2">
-                                            Итоговый балл (@(Model.GetScoreDescription(Model.Evaluation.Score)))
+                                            Итоговый балл (@Model.GetScoreDescription(Model.Evaluation.Score))
                                         </p>
                                     </div>
 
@@ -99,19 +99,10 @@
                                         <dd class="col-sm-7">@Model.Evaluation.EvaluationDate.ToShortDateString()</dd>
 
                                         <dt class="col-sm-5">Оценил:</dt>
-                                        <dd class="col-sm-7">@Model.Evaluation.Evaluator.Username</dd>
+                                        <dd class="col-sm-7">@Model.Evaluation.EvaluatorUsername</dd>
 
                                         <dt class="col-sm-5">Период:</dt>
-                                        <dd class="col-sm-7">@Model.Evaluation.Summary.PeriodStart.ToShortDateString() - @Model.Evaluation.Summary.PeriodEnd.ToShortDateString()</dd>
-
-                                        <dt class="col-sm-5">Создана:</dt>
-                                        <dd class="col-sm-7">@Model.Evaluation.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd>
-
-                                        @if (Model.Evaluation.UpdatedAt.HasValue)
-                                        {
-                                            <dt class="col-sm-5">Обновлена:</dt>
-                                            <dd class="col-sm-7">@Model.Evaluation.UpdatedAt.Value.ToString("dd.MM.yyyy HH:mm")</dd>
-                                        }
+                                        <dd class="col-sm-7">@Model.Evaluation.PeriodStart.ToShortDateString() - @Model.Evaluation.PeriodEnd.ToShortDateString()</dd>
                                     </dl>
                                 </div>
                             </div>
@@ -125,22 +116,22 @@
                                 <div class="card-body">
                                     <div class="row mb-4">
                                         <div class="col-6 text-center">
-                                            <div class="h3">@Model.Evaluation.Summary.AttendanceDays</div>
+                                            <div class="h3">@Model.Evaluation.AttendanceDays</div>
                                             <div class="text-muted small">дней присутствия</div>
                                         </div>
                                         <div class="col-6 text-center">
-                                            <div class="h3">@Model.Evaluation.Summary.CompletedTasks</div>
+                                            <div class="h3">@Model.Evaluation.CompletedTasks</div>
                                             <div class="text-muted small">выполнено задач</div>
                                         </div>
                                     </div>
 
                                     <div class="row mb-3">
                                         <div class="col-6 text-center">
-                                            <div class="h4">@Model.Evaluation.Summary.TotalHoursWorked.ToString("F1")</div>
+                                            <div class="h4">@Model.Evaluation.TotalHoursWorked.ToString("F1")</div>
                                             <div class="text-muted small">рабочих часов</div>
                                         </div>
                                         <div class="col-6 text-center">
-                                            <div class="h4">@Model.Evaluation.Summary.AvgTaskEfficiency.ToString("F1")</div>
+                                            <div class="h4">@Model.Evaluation.AvgTaskEfficiency.ToString("F1")</div>
                                             <div class="text-muted small">ср. эффективность</div>
                                         </div>
                                     </div>
@@ -149,24 +140,24 @@
                                         <h6 class="mb-2">Ключевые показатели</h6>
                                         <div class="progress mb-2" style="height: 8px;">
                                             <div class="progress-bar bg-success" role="progressbar"
-                                                 style="width: @(Model.Evaluation.Summary.AttendanceScore)%"
-                                                 aria-valuenow="@(Model.Evaluation.Summary.AttendanceScore)"
+                                                 style="width: @(Model.Evaluation.AttendanceScore)%"
+                                                 aria-valuenow="@(Model.Evaluation.AttendanceScore)"
                                                  aria-valuemin="0" aria-valuemax="100"
-                                                 data-bs-toggle="tooltip" title="Посещаемость: @Model.Evaluation.Summary.AttendanceScore.ToString("F1")%"></div>
+                                                 data-bs-toggle="tooltip" title="Посещаемость: @Model.Evaluation.AttendanceScore.ToString("F1")%"></div>
                                         </div>
                                         <div class="progress mb-2" style="height: 8px;">
                                             <div class="progress-bar bg-info" role="progressbar"
-                                                 style="width: @(Model.Evaluation.Summary.TaskScore)%"
-                                                 aria-valuenow="@(Model.Evaluation.Summary.TaskScore)"
+                                                 style="width: @(Model.Evaluation.TaskScore)%"
+                                                 aria-valuenow="@(Model.Evaluation.TaskScore)"
                                                  aria-valuemin="0" aria-valuemax="100"
-                                                 data-bs-toggle="tooltip" title="Выполнение задач: @Model.Evaluation.Summary.TaskScore.ToString("F1")%"></div>
+                                                 data-bs-toggle="tooltip" title="Выполнение задач: @Model.Evaluation.TaskScore.ToString("F1")%"></div>
                                         </div>
                                         <div class="progress mb-2" style="height: 8px;">
                                             <div class="progress-bar bg-warning" role="progressbar"
-                                                 style="width: @(Model.Evaluation.Summary.PenaltyScore)%"
-                                                 aria-valuenow="@(Model.Evaluation.Summary.PenaltyScore)"
+                                                 style="width: @(Model.Evaluation.PenaltyScore)%"
+                                                 aria-valuenow="@(Model.Evaluation.PenaltyScore)"
                                                  aria-valuemin="0" aria-valuemax="100"
-                                                 data-bs-toggle="tooltip" title="Оценка дисциплины: @Model.Evaluation.Summary.PenaltyScore.ToString("F1")%"></div>
+                                                 data-bs-toggle="tooltip" title="Оценка дисциплины: @Model.Evaluation.PenaltyScore.ToString("F1")%"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -197,11 +188,11 @@
                                                     @foreach (var score in Model.EvaluationScores)
                                                     {
                                                         <tr>
-                                                            <td>@score.Criterion.Name</td>
-                                                            <td>@score.Criterion.Weight.ToString("P0")</td>
+                                                            <td>@score.CriterionName</td>
+                                                            <td>@score.Weight.ToString("P0")</td>
                                                             <td>
                                                                 <div class="progress" style="height: 8px;">
-                                                                    <div class="progress-bar @(score.Score >= 70 ? "bg-success" : (score.Score >= 50 ? "bg-warning" : "bg-danger"))"
+                                                                    <div class="progress-bar bg-@(score.Score >= 70 ? "success" : (score.Score >= 50 ? "warning" : "danger"))"
                                                                          role="progressbar"
                                                                          style="width: @(score.Score)%"
                                                                          aria-valuenow="@(score.Score)"
@@ -210,7 +201,7 @@
                                                                 </div>
                                                                 <small class="d-block text-center mt-1">@score.Score.ToString("F1")</small>
                                                             </td>
-                                                            <td>@((score.Score * score.Criterion.Weight).ToString("F1"))</td>
+                                                            <td>@(score.WeightedScore.ToString("F1"))</td>
                                                         </tr>
                                                     }
                                                 </tbody>

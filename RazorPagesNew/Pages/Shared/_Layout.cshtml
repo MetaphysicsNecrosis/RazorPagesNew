@@ -1,9 +1,13 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Система оценки персонала</title>
+    <title>@ViewData["Title"] - Система оценки персонала банка</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -24,39 +28,45 @@
                     <ul class="navbar-nav flex-grow-1">
                         @if (User.Identity!.IsAuthenticated)
                         {
+                            <!-- Дашборд - главная страница системы -->
                             <li class="nav-item">
                                 <a class="nav-link text-white" asp-area="" asp-page="/Dashboard/Index">
-                                    <i class="fas fa-home me-1"></i> Дашборд
+                                    <i class="fas fa-tachometer-alt me-1"></i> Дашборд
                                 </a>
                             </li>
+
+                            <!-- Управление персоналом -->
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-white" href="#" id="activityDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-clipboard-list me-1"></i> Активность
-                                </a>
-                                <ul class="dropdown-menu" aria-labelledby="activityDropdown">
-                                    <li><a class="dropdown-item" asp-page="/Activity/Attendance"><i class="fas fa-calendar-check me-1"></i> Посещаемость</a></li>
-                                    <li><a class="dropdown-item" asp-page="/Activity/Tasks"><i class="fas fa-tasks me-1"></i> Задачи</a></li>
-                                    <li><a class="dropdown-item" asp-page="/Activity/Leaves"><i class="fas fa-umbrella-beach me-1"></i> Отпуска</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" asp-page="/ActivitySummaries/Index"><i class="fas fa-chart-pie me-1"></i> Сводки активности</a></li>
-                                    <li><a class="dropdown-item" asp-page="/ActivitySummaries/Generate"><i class="fas fa-calculator me-1"></i> Генерация сводок</a></li>
-                                </ul>
-                            </li>
-                            <!-- Группа Персонал -->
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-white" href="#" id="personnelDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle text-white" href="#" id="employeesDropdown"
+                                   role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="fas fa-users me-1"></i> Персонал
                                 </a>
-                                <ul class="dropdown-menu" aria-labelledby="personnelDropdown">
-                                    <li><a class="dropdown-item" asp-page="/Employees/Index"><i class="fas fa-user-friends me-1"></i> Сотрудники</a></li>
-                                    <li><a class="dropdown-item" asp-page="/Evaluations/Index"><i class="fas fa-star-half-alt me-1"></i> Оценки</a></li>
-                                    <li><a class="dropdown-item" asp-page="/Criteria/Index"><i class="fas fa-list-alt me-1"></i> Критерии</a></li>
+                                <ul class="dropdown-menu" aria-labelledby="employeesDropdown">
+                                    <li><a class="dropdown-item" asp-page="/Employees/Index"><i class="fas fa-list me-1"></i> Все сотрудники</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Employees/Create"><i class="fas fa-user-plus me-1"></i> Добавить сотрудника</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" asp-page="/Admin/Departments"><i class="fas fa-building me-1"></i> Отделы</a></li>
                                 </ul>
                             </li>
 
-                            <!-- Активность -->
+                            <!-- Система оценки -->
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-white" href="#" id="activityDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle text-white" href="#" id="evaluationsDropdown"
+                                   role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-star-half-alt me-1"></i> Оценка
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="evaluationsDropdown">
+                                    <li><a class="dropdown-item" asp-page="/Evaluations/Index"><i class="fas fa-list-alt me-1"></i> Все оценки</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Evaluations/Create"><i class="fas fa-plus-circle me-1"></i> Новая оценка</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" asp-page="/Criteria/Index"><i class="fas fa-sliders-h me-1"></i> Критерии оценки</a></li>
+                                </ul>
+                            </li>
+
+                            <!-- Активность сотрудников -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-white" href="#" id="activityDropdown"
+                                   role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="fas fa-clipboard-list me-1"></i> Активность
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="activityDropdown">
@@ -64,61 +74,126 @@
                                     <li><a class="dropdown-item" asp-page="/Activity/Tasks"><i class="fas fa-tasks me-1"></i> Задачи</a></li>
                                     <li><a class="dropdown-item" asp-page="/Activity/Leaves"><i class="fas fa-umbrella-beach me-1"></i> Отпуска</a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" asp-page="/ActivitySummaries/Index"><i class="fas fa-chart-pie me-1"></i> Сводки активности</a></li>
-                                    <li><a class="dropdown-item" asp-page="/ActivitySummaries/Generate"><i class="fas fa-calculator me-1"></i> Генерация сводок</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Activity/Summary"><i class="fas fa-chart-pie me-1"></i> Сводка активности</a></li>
+                                    <li><a class="dropdown-item" asp-page="/ActivitySummaries/Index"><i class="fas fa-list-alt me-1"></i> Все сводки</a></li>
+                                    <li><a class="dropdown-item" asp-page="/ActivitySummaries/Create"><i class="fas fa-plus-circle me-1"></i> Создать сводку</a></li>
                                 </ul>
                             </li>
 
-                            <!-- Отчеты -->
+                            <!-- Аналитика и отчеты -->
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-white" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle text-white" href="#" id="reportsDropdown"
+                                   role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="fas fa-chart-bar me-1"></i> Отчеты
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="reportsDropdown">
-                                    <li><a class="dropdown-item" asp-page="/Reports/EmployeePerformance"><i class="fas fa-chart-line me-1"></i> Эффективность персонала</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Reports/EmployeePerformance"><i class="fas fa-chart-line me-1"></i> Эффективность сотрудников</a></li>
                                     <li><a class="dropdown-item" asp-page="/Reports/DepartmentPerformance"><i class="fas fa-building me-1"></i> Эффективность отделов</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Reports/ActivityAnalysis"><i class="fas fa-clipboard-check me-1"></i> Анализ активности</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" asp-page="/Reports/AttendanceReport"><i class="fas fa-calendar-check me-1"></i> Отчет посещаемости</a></li>
                                 </ul>
                             </li>
 
+                            <!-- Администрирование (только для админов) -->
                             @if (User.IsInRole("Admin"))
                             {
-                                <!-- Администрирование -->
                                 <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle text-white" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <a class="nav-link dropdown-toggle text-white" href="#" id="adminDropdown"
+                                       role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="fas fa-cog me-1"></i> Администрирование
                                     </a>
                                     <ul class="dropdown-menu" aria-labelledby="adminDropdown">
                                         <li><a class="dropdown-item" asp-page="/Admin/Users"><i class="fas fa-user-cog me-1"></i> Пользователи</a></li>
                                         <li><a class="dropdown-item" asp-page="/Admin/Roles"><i class="fas fa-user-tag me-1"></i> Роли</a></li>
                                         <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item" asp-page="/Admin/Departments"><i class="fas fa-building me-1"></i> Отделы</a></li>
-                                        <li><a class="dropdown-item" asp-page="/Admin/SystemSettings"><i class="fas fa-sliders-h me-1"></i> Настройки системы</a></li>
-                                        <li><hr class="dropdown-divider"></li>
                                         <li><a class="dropdown-item" asp-page="/Admin/AuditLog"><i class="fas fa-history me-1"></i> Журнал аудита</a></li>
+                                        <li><a class="dropdown-item" asp-page="/Admin/SystemSettings"><i class="fas fa-sliders-h me-1"></i> Настройки системы</a></li>
+                                    </ul>
+                                </li>
+                            }
+
+                            <!-- HR-специфические функции (только для HR) -->
+                            @if (User.IsInRole("HR"))
+                            {
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle text-white" href="#" id="hrDropdown"
+                                       role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-briefcase me-1"></i> HR-инструменты
+                                    </a>
+                                    <ul class="dropdown-menu" aria-labelledby="hrDropdown">
+                                        <li><a class="dropdown-item" asp-page="/HR/Recruitment"><i class="fas fa-user-friends me-1"></i> Подбор персонала</a></li>
+                                        <li><a class="dropdown-item" asp-page="/HR/Training"><i class="fas fa-graduation-cap me-1"></i> Обучение</a></li>
                                     </ul>
                                 </li>
                             }
                         }
                     </ul>
-                    <partial name="_LoginPartial" />
+
+                    <!-- Секция пользователя (профиль, вход/выход) -->
+                    <ul class="navbar-nav">
+                        @if (SignInManager.IsSignedIn(User))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-white" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user-circle me-1"></i> @User.Identity?.Name
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-page="/Profile/Index">
+                                            <i class="fas fa-id-card me-1"></i> Мой профиль
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-page="/Profile/ChangePassword">
+                                            <i class="fas fa-key me-1"></i> Изменить пароль
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form class="form-inline" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
+                                            <button type="submit" class="dropdown-item">
+                                                <i class="fas fa-sign-out-alt me-1"></i> Выйти
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-white" asp-page="/Account/Register">
+                                    <i class="fas fa-user-plus me-1"></i> Регистрация
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-white" asp-page="/Account/Login">
+                                    <i class="fas fa-sign-in-alt me-1"></i> Вход
+                                </a>
+                            </li>
+                        }
+                    </ul>
                 </div>
             </div>
         </nav>
     </header>
+
+    <!-- Основной контент страницы -->
     <div class="container-fluid">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
+    <!-- Подвал сайта -->
     <footer class="border-top footer text-muted">
         <div class="container">
             &copy; @DateTime.Now.Year - Система оценки персонала банка - <a asp-area="" asp-page="/Privacy">Политика конфиденциальности</a>
         </div>
     </footer>
 
+    <!-- JavaScript -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
