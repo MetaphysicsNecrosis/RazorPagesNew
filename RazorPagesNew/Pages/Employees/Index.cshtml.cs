@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using RazorPagesNew.ModelsDb;
 using RazorPagesNew.Services.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace RazorPagesNew.Pages.Employees
 {
@@ -31,7 +35,7 @@ namespace RazorPagesNew.Pages.Employees
         public string ScoreSort { get; set; }
         public int CurrentPage { get; set; } = 1;
         public int TotalPages { get; set; }
-        public List<EmployeeViewModel> Employees { get; set; } = new List<EmployeeViewModel>();
+        public List<EmployeeCardViewModel> Employees { get; set; } = new List<EmployeeCardViewModel>();
 
         public async Task<IActionResult> OnGetAsync(
             string sortOrder,
@@ -85,7 +89,7 @@ namespace RazorPagesNew.Pages.Employees
             employeesQuery = ApplySorting(employeesQuery, sortOrder);
 
             // Пагинация
-            int pageSize = 10;
+            int pageSize = 12; // Увеличили количество элементов на странице для карточек
             var totalItems = employeesQuery.Count();
             TotalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
@@ -119,9 +123,9 @@ namespace RazorPagesNew.Pages.Employees
             };
         }
 
-        private async Task<List<EmployeeViewModel>> TransformToViewModelAsync(List<Employee> employees)
+        private async Task<List<EmployeeCardViewModel>> TransformToViewModelAsync(List<Employee> employees)
         {
-            var viewModelList = new List<EmployeeViewModel>();
+            var viewModelList = new List<EmployeeCardViewModel>();
 
             foreach (var employee in employees)
             {
@@ -143,7 +147,7 @@ namespace RazorPagesNew.Pages.Employees
                     }
                 }
 
-                viewModelList.Add(new EmployeeViewModel
+                viewModelList.Add(new EmployeeCardViewModel
                 {
                     Id = employee.Id,
                     FullName = employee.FullName,
@@ -151,7 +155,8 @@ namespace RazorPagesNew.Pages.Employees
                     Department = employee.Department,
                     Email = employee.Email,
                     Phone = employee.Phone,
-                    AverageScore = averageScore
+                    AverageScore = averageScore,
+                    PhotoPath = employee.PhotoPath
                 });
             }
 
@@ -159,7 +164,7 @@ namespace RazorPagesNew.Pages.Employees
         }
     }
 
-    public class EmployeeViewModel
+    public class EmployeeCardViewModel
     {
         public int Id { get; set; }
         public string FullName { get; set; }
@@ -168,5 +173,6 @@ namespace RazorPagesNew.Pages.Employees
         public string Email { get; set; }
         public string Phone { get; set; }
         public double AverageScore { get; set; }
+        public string PhotoPath { get; set; }
     }
 }

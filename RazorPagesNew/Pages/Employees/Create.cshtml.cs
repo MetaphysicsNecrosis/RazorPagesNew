@@ -8,6 +8,9 @@ using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using System;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Hosting;
+using System.IO;
+using Microsoft.AspNetCore.Http;
 
 namespace RazorPagesNew.Pages.Employees
 {
@@ -17,17 +20,27 @@ namespace RazorPagesNew.Pages.Employees
         private readonly MyApplicationDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IUserService _userService;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public CreateModel(IEmployeeService employeeService, MyApplicationDbContext context, UserManager<IdentityUser> userManager, IUserService userService)
+        public CreateModel(
+            IEmployeeService employeeService,
+            MyApplicationDbContext context,
+            UserManager<IdentityUser> userManager,
+            IUserService userService,
+            IWebHostEnvironment webHostEnvironment)
         {
             _employeeService = employeeService;
             _context = context;
             _userManager = userManager;
             _userService = userService;
+            _webHostEnvironment = webHostEnvironment;
         }
 
         [BindProperty]
         public EmployeeCreateViewModel Employee { get; set; } = new EmployeeCreateViewModel();
+
+        [BindProperty]
+        public IFormFile PhotoUpload { get; set; }
 
         public SelectList DepartmentList { get; set; }
 
@@ -39,13 +52,21 @@ namespace RazorPagesNew.Pages.Employees
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
+            /*if (!ModelState.IsValid)
             {
                 await LoadDepartmentsAsync();
                 return Page();
-            }
+            }*/
+
             var currentUser = await _userService.GetByIdAsync(_userManager.GetUserId(User));
-            Console.WriteLine(currentUser.Id + "-----------------------------------------------------");
+
+            // Обработка загрузки фотографии
+            string photoPath = null;
+            if (PhotoUpload != null && PhotoUpload.Length > 0)
+            {
+                photoPath = await SavePhotoAsync(PhotoUpload);
+            }
+
             var newEmployee = new Employee
             {
                 FullName = Employee.FullName,
@@ -56,11 +77,12 @@ namespace RazorPagesNew.Pages.Employees
                 HireDate = Employee.HireDate,
                 VacationBalance = Employee.VacationBalance,
                 SickLeaveUsed = Employee.SickLeaveUsed,
-                PhotoPath = Employee.PhotoPath,
+                PhotoPath = photoPath,
                 EmploymentType = Employee.EmploymentType,
                 OwnerId = currentUser.Id,
-/*                Status = Employee.Status,
-                Notes = Employee.Notes*/
+     /*           Status = Employee.Status,
+                Notes = Employee.Notes,*/
+                CreatedAt = DateTime.Now
             };
 
             try
@@ -74,6 +96,33 @@ namespace RazorPagesNew.Pages.Employees
                 await LoadDepartmentsAsync();
                 return Page();
             }
+        }
+
+        private async Task<string> SavePhotoAsync(IFormFile photo)
+        {
+            // Создаем уникальное имя файла
+            string uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(photo.FileName);
+
+            // Путь к папке для хранения фотографий
+            string uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images", "employees");
+
+            // Создаем директорию, если она не существует
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            // Полный путь к файлу
+            string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            // Сохраняем файл
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await photo.CopyToAsync(fileStream);
+            }
+
+            // Возвращаем относительный путь для хранения в БД
+            return "/images/employees/" + uniqueFileName;
         }
 
         private async Task LoadDepartmentsAsync()
@@ -128,7 +177,7 @@ namespace RazorPagesNew.Pages.Employees
         [Display(Name = "Фото")]
         public string PhotoPath { get; set; }
 
-        [Required(ErrorMessage = "Тип занятости обязательна")]
+        [Required(ErrorMessage = "Тип занятости обязателен")]
         [Display(Name = "Тип занятости")]
         public int EmploymentType { get; set; }
 

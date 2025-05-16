@@ -1,0 +1,578 @@
+﻿@page
+@model RazorPagesNew.Pages.Activity.AttendanceModel
+@{
+    ViewData["Title"] = "Посещаемость сотрудников";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Посещаемость сотрудников</h5>
+                    <div>
+                        <button type="button" class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importAttendanceModal">
+                            <i class="fas fa-file-import me-1"></i> Импорт
+                        </button>
+                        <a asp-page-handler="Export" class="btn btn-light btn-sm me-2">
+                            <i class="fas fa-file-export me-1"></i> Экспорт
+                        </a>
+                        <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#createAttendanceModal">
+                            <i class="fas fa-plus me-1"></i> Добавить запись
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        var statusClass = Model.StatusMessage.Contains("Ошибка") ? "danger" : "success";
+                        <div class="alert alert-@statusClass alert-dismissible fade show" role="alert">
+                            @Model.StatusMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <form method="get" class="d-flex">
+                                <div class="input-group">
+                                    <input type="text" name="searchTerm" class="form-control" placeholder="Поиск сотрудников..." value="@Model.CurrentFilter" />
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-end">
+                                <div class="input-group me-2" style="max-width: 200px;">
+                                    <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                    <input type="date" class="form-control" id="startDate" name="startDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" form="filterForm">
+                                </div>
+                                <div class="input-group me-2" style="max-width: 200px;">
+                                    <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                    <input type="date" class="form-control" id="endDate" name="endDate" value="@Model.EndDate.ToString("yyyy-MM-dd")" form="filterForm">
+                                </div>
+                                <select asp-for="EmployeeId" asp-items="Model.EmployeeList" class="form-select me-2" onchange="this.form.submit()" form="filterForm" style="max-width: 200px;">
+                                    <option value="">Все сотрудники</option>
+                                </select>
+                                <form id="filterForm" method="get">
+                                    <input type="hidden" name="searchTerm" value="@Model.CurrentFilter" />
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-filter"></i> Фильтр
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <ul class="nav nav-tabs mb-3">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="list-tab" data-bs-toggle="tab" href="#list-view" role="tab" aria-controls="list-view" aria-selected="true">
+                                <i class="fas fa-list me-1"></i> Список
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="calendar-tab" data-bs-toggle="tab" href="#calendar-view" role="tab" aria-controls="calendar-view" aria-selected="false">
+                                <i class="fas fa-calendar-alt me-1"></i> Календарь
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="stats-tab" data-bs-toggle="tab" href="#stats-view" role="tab" aria-controls="stats-view" aria-selected="false">
+                                <i class="fas fa-chart-bar me-1"></i> Статистика
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="list-view" role="tabpanel" aria-labelledby="list-tab">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>
+                                                <a asp-page="./Attendance" asp-route-sortOrder="@Model.DateSort"
+                                                   asp-route-currentFilter="@Model.CurrentFilter"
+                                                   asp-route-employeeId="@Model.EmployeeId"
+                                                   asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")"
+                                                   asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")">
+                                                    Дата
+                                                </a>
+                                            </th>
+                                            <th>
+                                                <a asp-page="./Attendance" asp-route-sortOrder="@Model.NameSort"
+                                                   asp-route-currentFilter="@Model.CurrentFilter"
+                                                   asp-route-employeeId="@Model.EmployeeId"
+                                                   asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")"
+                                                   asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")">
+                                                    Сотрудник
+                                                </a>
+                                            </th>
+                                            <th>Приход</th>
+                                            <th>Уход</th>
+                                            <th>Часы работы</th>
+                                            <th>Опоздание</th>
+                                            <th>Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var record in Model.AttendanceRecords)
+                                        {
+                                            var isLate = record.CheckIn.TimeOfDay > new TimeSpan(9, 0, 0);
+                                            <tr>
+                                                <td>@record.Date.ToString("dd.MM.yyyy")</td>
+                                                <td>
+                                                    <a asp-page="/Employees/Details" asp-route-id="@record.EmployeeId">@record.Employee.FullName</a>
+                                                </td>
+                                                <td class="@(isLate ? "text-danger" : "")">
+                                                    @record.CheckIn.ToString("HH:mm")
+                                                    @if (isLate)
+                                                    {
+                                                        <i class="fas fa-exclamation-triangle text-warning ms-1" data-bs-toggle="tooltip" title="Опоздание"></i>
+                                                    }
+                                                </td>
+                                                <td>@record.CheckOut.ToString("HH:mm")</td>
+                                                <td>@record.HoursWorked</td>
+                                                <td>
+                                                    @if (isLate)
+                                                    {
+                                                        var lateBy = (record.CheckIn.TimeOfDay - new TimeSpan(9, 0, 0)).TotalMinutes;
+                                                        <span class="text-danger">@lateBy.ToString("F0") мин.</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-success">Нет</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <button type="button" class="btn btn-outline-primary edit-attendance"
+                                                                data-id="@record.Id"
+                                                                data-employee-id="@record.EmployeeId"
+                                                                data-employee-name="@record.Employee.FullName"
+                                                                data-date="@record.Date.ToString("yyyy-MM-dd")"
+                                                                data-check-in="@record.CheckIn.ToString("HH:mm")"
+                                                                data-check-out="@record.CheckOut.ToString("HH:mm")"
+                                                                data-hours="@record.HoursWorked">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-danger delete-attendance"
+                                                                data-id="@record.Id"
+                                                                data-date="@record.Date.ToString("dd.MM.yyyy")"
+                                                                data-employee-name="@record.Employee.FullName">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            @if (!Model.AttendanceRecords.Any())
+                            {
+                                <div class="alert alert-info mt-3">
+                                    По вашему запросу записи о посещаемости не найдены.
+                                </div>
+                            }
+
+                            <nav aria-label="Page navigation" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    @for (var i = 1; i <= Model.TotalPages; i++)
+                                    {
+                                        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                            <a class="page-link" asp-page="./Attendance" asp-route-pageIndex="@i"
+                                               asp-route-currentFilter="@Model.CurrentFilter"
+                                               asp-route-employeeId="@Model.EmployeeId"
+                                               asp-route-startDate="@Model.StartDate.ToString("yyyy-MM-dd")"
+                                               asp-route-endDate="@Model.EndDate.ToString("yyyy-MM-dd")"
+                                               asp-route-sortOrder="@Model.CurrentSort">
+                                                @i
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </nav>
+                        </div>
+
+                        <div class="tab-pane fade" id="calendar-view" role="tabpanel" aria-labelledby="calendar-tab">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i> Просмотр календаря посещаемости. Выберите сотрудника для детального просмотра.
+                            </div>
+                            <div id="attendance-calendar"></div>
+                        </div>
+
+                        <div class="tab-pane fade" id="stats-view" role="tabpanel" aria-labelledby="stats-tab">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Статистика посещаемости</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <canvas id="attendanceChart" width="400" height="300"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Среднее время прихода/ухода</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <canvas id="timeChart" width="400" height="300"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="card">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0">Топ сотрудников по посещаемости</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-striped">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Сотрудник</th>
+                                                            <th>Всего дней</th>
+                                                            <th>Рабочих часов</th>
+                                                            <th>Опоздания</th>
+                                                            <th>Пунктуальность</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var stat in Model.EmployeeAttendanceStats.OrderByDescending(s => s.AttendanceDays))
+                                                        {
+                                                            <tr>
+                                                                <td>@stat.EmployeeName</td>
+                                                                <td>@stat.AttendanceDays</td>
+                                                                <td>@stat.TotalHours</td>
+                                                                <td>@stat.LateCount</td>
+                                                                <td>
+                                                                    <div class="progress">
+                                                                        <div class="progress-bar bg-success" role="progressbar"
+                                                                             style="width: @stat.PunctualityPercentage%"
+                                                                             aria-valuenow="@stat.PunctualityPercentage"
+                                                                             aria-valuemin="0" aria-valuemax="100">
+                                                                            @stat.PunctualityPercentage%
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для создания записи о посещаемости -->
+<div class="modal fade" id="createAttendanceModal" tabindex="-1" aria-labelledby="createAttendanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Create">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="createAttendanceModalLabel">Новая запись о посещаемости</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="employeeId" class="form-label">Сотрудник</label>
+                        <select class="form-select" id="employeeId" name="EmployeeId" required>
+                            <option value="">Выберите сотрудника</option>
+                            @foreach (var employee in Model.AllEmployees)
+                            {
+                                <option value="@employee.Id">@employee.FullName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="attendanceDate" class="form-label">Дата</label>
+                        <input type="date" class="form-control" id="attendanceDate" name="Date" required value="@DateTime.Today.ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="checkInTime" class="form-label">Время прихода</label>
+                            <input type="time" class="form-control" id="checkInTime" name="CheckIn" required value="09:00">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="checkOutTime" class="form-label">Время ухода</label>
+                            <input type="time" class="form-control" id="checkOutTime" name="CheckOut" required value="18:00">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для редактирования записи о посещаемости -->
+<div class="modal fade" id="editAttendanceModal" tabindex="-1" aria-labelledby="editAttendanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Edit">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editAttendanceModalLabel">Редактирование записи о посещаемости</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editAttendanceId" name="Id">
+                    <div class="mb-3">
+                        <label for="editEmployeeId" class="form-label">Сотрудник</label>
+                        <select class="form-select" id="editEmployeeId" name="EmployeeId" required disabled>
+                            @foreach (var employee in Model.AllEmployees)
+                            {
+                                <option value="@employee.Id">@employee.FullName</option>
+                            }
+                        </select>
+                        <input type="hidden" id="hiddenEditEmployeeId" name="EmployeeId" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="editAttendanceDate" class="form-label">Дата</label>
+                        <input type="date" class="form-control" id="editAttendanceDate" name="Date" required>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="editCheckInTime" class="form-label">Время прихода</label>
+                            <input type="time" class="form-control" id="editCheckInTime" name="CheckIn" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editCheckOutTime" class="form-label">Время ухода</label>
+                            <input type="time" class="form-control" id="editCheckOutTime" name="CheckOut" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Сохранить изменения
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для удаления записи о посещаемости -->
+<div class="modal fade" id="deleteAttendanceModal" tabindex="-1" aria-labelledby="deleteAttendanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Delete">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteAttendanceModalLabel">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="deleteAttendanceId" name="Id">
+                    <p>Вы уверены, что хотите удалить запись о посещаемости для <strong id="deleteAttendanceEmployee"></strong> на дату <strong id="deleteAttendanceDate"></strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Удалить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для импорта записей о посещаемости -->
+<div class="modal fade" id="importAttendanceModal" tabindex="-1" aria-labelledby="importAttendanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Import" enctype="multipart/form-data">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="importAttendanceModalLabel">Импорт записей о посещаемости</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="importFile" class="form-label">Выберите файл CSV или Excel</label>
+                        <input type="file" class="form-control" id="importFile" name="importFile" required accept=".csv,.xlsx,.xls">
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Формат файла:</strong>
+                        <ul class="mb-0">
+                            <li>EmployeeId, Date, CheckIn, CheckOut</li>
+                            <li>Пример: 1, 2023-11-01, 09:00, 18:00</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-file-import me-1"></i> Импортировать
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css" />
+
+    <script>
+        $(document).ready(function () {
+            // Инициализация тултипов
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Обработка клика по кнопке редактирования
+            $('.edit-attendance').click(function () {
+                var id = $(this).data('id');
+                var employeeId = $(this).data('employee-id');
+                var date = $(this).data('date');
+                var checkIn = $(this).data('check-in');
+                var checkOut = $(this).data('check-out');
+
+                $('#editAttendanceId').val(id);
+                $('#editEmployeeId').val(employeeId);
+                $('#hiddenEditEmployeeId').val(employeeId);
+                $('#editAttendanceDate').val(date);
+                $('#editCheckInTime').val(checkIn);
+                $('#editCheckOutTime').val(checkOut);
+
+                $('#editAttendanceModal').modal('show');
+            });
+
+            // Обработка клика по кнопке удаления
+            $('.delete-attendance').click(function () {
+                var id = $(this).data('id');
+                var date = $(this).data('date');
+                var employee = $(this).data('employee-name');
+
+                $('#deleteAttendanceId').val(id);
+                $('#deleteAttendanceDate').text(date);
+                $('#deleteAttendanceEmployee').text(employee);
+
+                $('#deleteAttendanceModal').modal('show');
+            });
+
+            // Календарь посещаемости
+            var calendarEl = document.getElementById('attendance-calendar');
+            if (calendarEl) {
+                var calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,timeGridWeek,listWeek'
+                    },
+                    events: @Html.Raw(Json.Serialize(Model.CalendarEvents)),
+                    eventClick: function (info) {
+                        // Показ информации о посещаемости при клике на событие
+                        alert(info.event.title);
+                    }
+                });
+                calendar.render();
+            }
+
+            // График посещаемости
+            var ctx = document.getElementById('attendanceChart');
+            if (ctx) {
+                var myChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: @Html.Raw(Json.Serialize(Model.ChartDates)),
+                        datasets: [{
+                            label: 'Количество сотрудников',
+                            data: @Html.Raw(Json.Serialize(Model.ChartCounts)),
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Количество сотрудников'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Дата'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // График среднего времени прихода/ухода
+            var timeCtx = document.getElementById('timeChart');
+            if (timeCtx) {
+                var timeChart = new Chart(timeCtx, {
+                    type: 'line',
+                    data: {
+                        labels: @Html.Raw(Json.Serialize(Model.ChartDates)),
+                        datasets: [
+                            {
+                                label: 'Среднее время прихода',
+                                data: @Html.Raw(Json.Serialize(Model.AvgCheckInTimes)),
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 2,
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Среднее время ухода',
+                                data: @Html.Raw(Json.Serialize(Model.AvgCheckOutTimes)),
+                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                borderWidth: 2,
+                                tension: 0.1
+                            }
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Время (часы)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Дата'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+}

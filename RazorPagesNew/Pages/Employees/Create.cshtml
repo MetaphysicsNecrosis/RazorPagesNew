@@ -14,56 +14,77 @@
                     </a>
                 </div>
                 <div class="card-body">
-                    <form method="post" class="needs-validation" novalidate>
+                    <form method="post" class="needs-validation" enctype="multipart/form-data" novalidate>
                         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-                        <!-- Основная информация -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <!-- Поле ФИО -->
-                                <div class="form-group mb-3">
-                                    <label asp-for="Employee.FullName" class="form-label">ФИО</label>
-                                    <input asp-for="Employee.FullName" class="form-control" required />
-                                    <span asp-validation-for="Employee.FullName" class="text-danger"></span>
+                        <div class="row mb-4">
+                            <!-- Колонка с превью фото и загрузкой -->
+                            <div class="col-md-3 text-center">
+                                <div class="photo-preview mb-3">
+                                    <div id="photoPreview" class="bg-light rounded-circle mx-auto d-flex align-items-center justify-content-center" style="width: 200px; height: 200px; overflow: hidden;">
+                                        <i id="defaultIcon" class="fas fa-user fa-5x text-secondary"></i>
+                                        <img id="previewImage" src="" alt="" class="img-fluid rounded-circle d-none" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
                                 </div>
-
-                                <!-- Поле Email -->
-                                <div class="form-group mb-3">
-                                    <label asp-for="Employee.Email" class="form-label">Email</label>
-                                    <input asp-for="Employee.Email" class="form-control" type="email" required />
-                                    <span asp-validation-for="Employee.Email" class="text-danger"></span>
-                                </div>
-
-                                <!-- Поле Телефон -->
-                                <div class="form-group mb-3">
-                                    <label asp-for="Employee.Phone" class="form-label">Телефон</label>
-                                    <input asp-for="Employee.Phone" class="form-control" />
-                                    <span asp-validation-for="Employee.Phone" class="text-danger"></span>
+                                <div class="form-group">
+                                    <label for="photoUpload" class="btn btn-outline-primary">
+                                        <i class="fas fa-camera me-1"></i> Загрузить фото
+                                    </label>
+                                    <input type="file" id="photoUpload" name="PhotoUpload" class="d-none" accept="image/*" onchange="previewPhoto(this);" />
+                                    <input asp-for="Employee.PhotoPath" type="hidden" />
                                 </div>
                             </div>
 
-                            <div class="col-md-6">
-                                <!-- Поле Должность -->
-                                <div class="form-group mb-3">
-                                    <label asp-for="Employee.Position" class="form-label">Должность</label>
-                                    <input asp-for="Employee.Position" class="form-control" required />
-                                    <span asp-validation-for="Employee.Position" class="text-danger"></span>
-                                </div>
+                            <!-- Основная информация -->
+                            <div class="col-md-9">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <!-- Поле ФИО -->
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Employee.FullName" class="form-label">ФИО</label>
+                                            <input asp-for="Employee.FullName" class="form-control" required />
+                                            <span asp-validation-for="Employee.FullName" class="text-danger"></span>
+                                        </div>
 
-                                <!-- Поле Отдел -->
-                                <div class="form-group mb-3">
-                                    <label asp-for="Employee.DepartmentId" class="form-label">Отдел</label>
-                                    <select asp-for="Employee.DepartmentId" asp-items="Model.DepartmentList" class="form-select" required>
-                                        <option value="">-- Выберите отдел --</option>
-                                    </select>
-                                    <span asp-validation-for="Employee.DepartmentId" class="text-danger"></span>
-                                </div>
+                                        <!-- Поле Email -->
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Employee.Email" class="form-label">Email</label>
+                                            <input asp-for="Employee.Email" class="form-control" type="email" required />
+                                            <span asp-validation-for="Employee.Email" class="text-danger"></span>
+                                        </div>
 
-                                <!-- Поле Дата найма -->
-                                <div class="form-group mb-3">
-                                    <label asp-for="Employee.HireDate" class="form-label">Дата найма</label>
-                                    <input asp-for="Employee.HireDate" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
-                                    <span asp-validation-for="Employee.HireDate" class="text-danger"></span>
+                                        <!-- Поле Телефон -->
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Employee.Phone" class="form-label">Телефон</label>
+                                            <input asp-for="Employee.Phone" class="form-control" />
+                                            <span asp-validation-for="Employee.Phone" class="text-danger"></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <!-- Поле Должность -->
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Employee.Position" class="form-label">Должность</label>
+                                            <input asp-for="Employee.Position" class="form-control" required />
+                                            <span asp-validation-for="Employee.Position" class="text-danger"></span>
+                                        </div>
+
+                                        <!-- Поле Отдел -->
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Employee.DepartmentId" class="form-label">Отдел</label>
+                                            <select asp-for="Employee.DepartmentId" asp-items="Model.DepartmentList" class="form-select" required>
+                                                <option value="">-- Выберите отдел --</option>
+                                            </select>
+                                            <span asp-validation-for="Employee.DepartmentId" class="text-danger"></span>
+                                        </div>
+
+                                        <!-- Поле Дата найма -->
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Employee.HireDate" class="form-label">Дата найма</label>
+                                            <input asp-for="Employee.HireDate" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                                            <span asp-validation-for="Employee.HireDate" class="text-danger"></span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -96,13 +117,6 @@
                                         <option value="Terminated">Уволен</option>
                                     </select>
                                     <span asp-validation-for="Employee.Status" class="text-danger"></span>
-                                </div>
-
-                                <!-- Поле Фото -->
-                                <div class="form-group mb-3">
-                                    <label asp-for="Employee.PhotoPath" class="form-label">Фото</label>
-                                    <input asp-for="Employee.PhotoPath" class="form-control" type="file" />
-                                    <span asp-validation-for="Employee.PhotoPath" class="text-danger"></span>
                                 </div>
 
                                 <!-- Поле Тип занятости -->
@@ -160,5 +174,23 @@
                     }, false)
                 })
         })()
+
+        // Функция для превью фотографии
+        function previewPhoto(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+
+                reader.onload = function (e) {
+                    var preview = document.getElementById('previewImage');
+                    var defaultIcon = document.getElementById('defaultIcon');
+
+                    preview.src = e.target.result;
+                    preview.classList.remove('d-none');
+                    defaultIcon.classList.add('d-none');
+                }
+
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
     </script>
 }
