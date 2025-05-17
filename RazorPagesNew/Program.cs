@@ -115,6 +115,8 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+// Add this line to the Program.cs file where other services are registered
+builder.Services.AddScoped<IEmployeeImportService, EmployeeImportService>();
 
 // Настройка политики CORS
 var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>();

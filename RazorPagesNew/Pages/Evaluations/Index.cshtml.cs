@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using RazorPagesNew.ModelsDb;
+using RazorPagesNew.Services.Interfaces;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,10 +13,11 @@ namespace RazorPagesNew.Pages.Evaluations
     public class IndexModel : PageModel
     {
         private readonly MyApplicationDbContext _context;
-
-        public IndexModel(MyApplicationDbContext context)
+        private readonly IEvaluationService _evaluationService;
+        public IndexModel(MyApplicationDbContext context, IEvaluationService evaluationService)
         {
             _context = context;
+            _evaluationService = evaluationService;
         }
 
         public class EvaluationListItem
@@ -269,8 +271,8 @@ namespace RazorPagesNew.Pages.Evaluations
 
             if (evaluation != null)
             {
-                _context.EmployeeEvaluations.Remove(evaluation);
-                await _context.SaveChangesAsync();
+                await _evaluationService.DeleteEvaluationAsync(id);
+                
             }
 
             return RedirectToPage();

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Shared;
 using NuGet.Protocol.Providers;
 using RazorPagesNew.Data;
 using RazorPagesNew.Models.Enums;
@@ -109,12 +110,33 @@ namespace RazorPagesNew.Services.Implementation
 
         public async Task<bool> DeleteEvaluationAsync(int id)
         {
-            var evaluation = await _context.EmployeeEvaluations.FindAsync(id);
-            if (evaluation == null)
-                return false;
+            {
+                try
+                {
+                    // Сначала удаляем связанные оценки по критериям
+                    var relatedScores = await _context.EvaluationScores
+                        .Where(s => s.EvaluationId == id)
+                        .ToListAsync();
 
-            _context.EmployeeEvaluations.Remove(evaluation);
-            await _context.SaveChangesAsync();
+                    if (relatedScores.Any())
+                    {
+                        _context.EvaluationScores.RemoveRange(relatedScores);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    // Теперь удаляем саму оценку
+                    var evaluation = await _context.EmployeeEvaluations.FindAsync(id);
+                    if (evaluation != null)
+                    {
+                        _context.EmployeeEvaluations.Remove(evaluation);
+                        await _context.SaveChangesAsync();
+                    }
+
+                }
+                catch (Exception ex)
+                { Console.WriteLine(ex.Message); }
+            }
+
 
             return true;
         }
