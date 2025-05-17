@@ -12,14 +12,6 @@
                     <h5 class="mb-0">Создание новой оценки сотрудника</h5>
                 </div>
                 <div class="card-body">
-                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-                    {
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            @Model.ErrorMessage
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    }
-
                     <form method="post" id="evaluationForm">
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                         <input type="hidden" asp-for="Evaluation.Id" />
@@ -30,7 +22,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label asp-for="Evaluation.EmployeeId" class="form-label">Сотрудник</label>
-                                    <select asp-for="Evaluation.EmployeeId" class="form-select" asp-items="Model.EmployeeList" id="employeeSelect">
+                                    <select asp-for="Evaluation.EmployeeId" class="form-select" asp-items="Model.EmployeeList">
                                         <option value="">Выберите сотрудника</option>
                                     </select>
                                     <span asp-validation-for="Evaluation.EmployeeId" class="text-danger"></span>
@@ -52,93 +44,757 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label asp-for="Evaluation.EvaluationDate" class="form-label">Дата проведения оценки</label>
-                                    <input asp-for="Evaluation.EvaluationDate" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                                    <input asp-for="Evaluation.EvaluationDate" class="form-control" type="date" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" />
                                     <span asp-validation-for="Evaluation.EvaluationDate" class="text-danger"></span>
                                 </div>
 
                                 <div class="mb-3">
+                                    <label for="evaluationModel" class="form-label">Модель расчета оценки</label>
+                                    <select id="evaluationModel" name="EvaluationModel" class="form-select">
+                                        <option value="weighted">Взвешенная оценка (стандартная)</option>
+                                        <option value="balanced">Сбалансированная система показателей (BSC)</option>
+                                        <option value="mbo">Управление по целям (MBO)</option>
+                                        <option value="kpi">Ключевые показатели эффективности (KPI)</option>
+                                    </select>
+                                    <div class="form-text">Выберите модель для расчета итоговой оценки сотрудника</div>
+                                </div>
+
+                                <div class="mb-3">
                                     <label asp-for="Evaluation.Notes" class="form-label">Комментарий к оценке</label>
-                                    <textarea asp-for="Evaluation.Notes" class="form-control" rows="5"></textarea>
+                                    <textarea asp-for="Evaluation.Notes" class="form-control" rows="3"></textarea>
                                     <span asp-validation-for="Evaluation.Notes" class="text-danger"></span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="card mb-4">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0">Оценка по критериям</h5>
+                        <!-- Стандартная модель взвешенной оценки -->
+                        <div id="weighted-model" class="evaluation-model-section">
+                            <h5 class="border-bottom pb-2 mb-3">Оценка по критериям</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Критерий</th>
+                                            <th>Вес</th>
+                                            <th>Оценка (0-100)</th>
+                                            <th>Результат</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < Model.CriteriaScores.Count; i++)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <input type="hidden" asp-for="CriteriaScores[i].CriterionId" />
+                                                    <input type="hidden" asp-for="CriteriaScores[i].CriterionName" />
+                                                    <input type="hidden" asp-for="CriteriaScores[i].Weight" />
+                                                    @Model.CriteriaScores[i].CriterionName
+                                                </td>
+                                                <td>@Model.CriteriaScores[i].Weight.ToString("P0")</td>
+                                                <td>
+                                                    <div class="input-group">
+                                                        <input asp-for="CriteriaScores[i].Score" type="number" 
+                                                               class="form-control score-input" 
+                                                               min="0" max="100" step="5" data-index="@i" />
+                                                        <span class="input-group-text">%</span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="progress">
+                                                        <div class="progress-bar progress-result" id="progressResult_@i"
+                                                             role="progressbar"
+                                                             style="width: @Model.CriteriaScores[i].Score%;"
+                                                             aria-valuenow="@Model.CriteriaScores[i].Score"
+                                                             aria-valuemin="0"
+                                                             aria-valuemax="100">
+                                                            @(Model.CriteriaScores[i].Score)%
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-secondary">
+                                            <th colspan="2">Итоговый результат:</th>
+                                            <th colspan="2">
+                                                <div class="progress">
+                                                    <div class="progress-bar bg-success" id="totalProgressBar"
+                                                         role="progressbar"
+                                                         style="width: 0%;"
+                                                         aria-valuenow="0"
+                                                         aria-valuemin="0"
+                                                         aria-valuemax="100">
+                                                        0%
+                                                    </div>
+                                                </div>
+                                            </th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
-                            <div class="card-body">
-                                <div class="alert alert-info mb-3">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Оцените сотрудника по каждому критерию. Итоговая оценка будет рассчитана как взвешенное среднее значение оценок по всем критериям.
-                                </div>
+                        </div>
 
-                                <div class="row mb-3">
-                                    <div class="col-12">
-                                        <div class="table-responsive">
-                                            <table class="table table-striped table-hover">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th style="width: 30%">Критерий</th>
-                                                        <th style="width: 15%">Вес</th>
-                                                        <th style="width: 40%">Оценка (0-100)</th>
-                                                        <th style="width: 15%">Итог</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @for (int i = 0; i < Model.CriteriaScores.Count; i++)
-                                                    {
-                                                        <tr>
-                                                            <td>
-                                                                <input type="hidden" asp-for="CriteriaScores[i].CriterionId" />
-                                                                <input type="hidden" asp-for="CriteriaScores[i].CriterionName" />
-                                                                <input type="hidden" asp-for="CriteriaScores[i].Weight" />
-                                                                @Model.CriteriaScores[i].CriterionName
-                                                            </td>
-                                                            <td>@Model.CriteriaScores[i].Weight.ToString("P0")</td>
-                                                            <td>
-                                                                <input asp-for="CriteriaScores[i].Score" type="range" class="form-range score-slider"
-                                                                       min="0" max="100" step="5" data-index="@i" />
-                                                                <div class="d-flex justify-content-between">
-                                                                    <small>0</small>
-                                                                    <small id="scoreValue_@i">@Model.CriteriaScores[i].Score</small>
-                                                                    <small>100</small>
-                                                                </div>
-                                                            </td>
-                                                            <td>
-                                                                <div class="progress">
-                                                                    <div class="progress-bar progress-result" id="progressResult_@i"
-                                                                         role="progressbar"
-                                                                         style="width: @Model.CriteriaScores[i].Score%;"
-                                                                         aria-valuenow="@Model.CriteriaScores[i].Score"
-                                                                         aria-valuemin="0"
-                                                                         aria-valuemax="100">
-                                                                        <span id="weightedScore_@i">@((Model.CriteriaScores[i].Weight * Model.CriteriaScores[i].Score).ToString("F1"))</span>
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    }
-                                                </tbody>
-                                                <tfoot>
-                                                    <tr class="table-secondary">
-                                                        <th colspan="3">Итоговый результат:</th>
-                                                        <th>
-                                                            <div class="progress">
-                                                                <div class="progress-bar bg-success" id="totalProgressBar"
-                                                                     role="progressbar"
-                                                                     style="width: 0%;"
-                                                                     aria-valuenow="0"
-                                                                     aria-valuemin="0"
-                                                                     aria-valuemax="100">
-                                                                    <span id="finalScoreDisplay">0.0</span>
-                                                                </div>
-                                                            </div>
-                                                        </th>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
+                        <!-- Сбалансированная система показателей (BSC) -->
+                        <div id="balanced-model" class="evaluation-model-section" style="display: none;">
+                            <h5 class="border-bottom pb-2 mb-3">Сбалансированная система показателей (BSC)</h5>
+                            
+                            <div class="row g-4">
+                                <!-- Финансовая перспектива -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-success text-white">
+                                            <h6 class="mb-0">Финансовая перспектива</h6>
+                                            <small>Вес: 30%</small>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label for="bsc_financial_1" class="form-label">Выполнение плана продаж</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control bsc-metric" id="bsc_financial_1" 
+                                                           name="BSC_Financial_1" min="0" max="100" step="1" value="0"
+                                                           data-perspective="financial" data-weight="0.5">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="bsc_financial_2" class="form-label">Снижение издержек</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control bsc-metric" id="bsc_financial_2" 
+                                                           name="BSC_Financial_2" min="0" max="100" step="1" value="0"
+                                                           data-perspective="financial" data-weight="0.3">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="bsc_financial_3" class="form-label">Рост доходности</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control bsc-metric" id="bsc_financial_3" 
+                                                           name="BSC_Financial_3" min="0" max="100" step="1" value="0"
+                                                           data-perspective="financial" data-weight="0.2">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mt-3 pt-2 border-top">
+                                                <div class="d-flex justify-content-between">
+                                                    <span>Итого:</span>
+                                                    <span id="bsc_financial_total">0%</span>
+                                                </div>
+                                                <div class="progress mt-2">
+                                                    <div class="progress-bar bg-success" id="bsc_financial_progress" 
+                                                         role="progressbar" style="width: 0%;" 
+                                                         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Клиентская перспектива -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-info text-white">
+                                            <h6 class="mb-0">Клиентская перспектива</h6>
+                                            <small>Вес: 25%</small>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label for="bsc_customer_1" class="form-label">Удовлетворенность клиентов</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control bsc-metric" id="bsc_customer_1" 
+                                                           name="BSC_Customer_1" min="0" max="100" step="1" value="0"
+                                                           data-perspective="customer" data-weight="0.5">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="bsc_customer_2" class="form-label">Привлечение клиентов</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control bsc-metric" id="bsc_customer_2" 
+                                                           name="BSC_Customer_2" min="0" max="100" step="1" value="0"
+                                                           data-perspective="customer" data-weight="0.3">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="bsc_customer_3" class="form-label">Удержание клиентов</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control bsc-metric" id="bsc_customer_3" 
+                                                           name="BSC_Customer_3" min="0" max="100" step="1" value="0"
+                                                           data-perspective="customer" data-weight="0.2">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mt-3 pt-2 border-top">
+                                                <div class="d-flex justify-content-between">
+                                                    <span>Итого:</span>
+                                                    <span id="bsc_customer_total">0%</span>
+                                                </div>
+                                                <div class="progress mt-2">
+                                                    <div class="progress-bar bg-info" id="bsc_customer_progress" 
+                                                         role="progressbar" style="width: 0%;" 
+                                                         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Внутренние процессы -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-warning text-dark">
+                                            <h6 class="mb-0">Внутренние процессы</h6>
+                                            <small>Вес: 25%</small>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label for="bsc_process_1" class="form-label">Качество обслуживания</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control bsc-metric" id="bsc_process_1" 
+                                                           name="BSC_Process_1" min="0" max="100" step="1" value="0"
+                                                           data-perspective="process" data-weight="0.4">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="bsc_process_2" class="form-label">Скорость обработки</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control bsc-metric" id="bsc_process_2" 
+                                                           name="BSC_Process_2" min="0" max="100" step="1" value="0"
+                                                           data-perspective="process" data-weight="0.3">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="bsc_process_3" class="form-label">Соблюдение процедур</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control bsc-metric" id="bsc_process_3" 
+                                                           name="BSC_Process_3" min="0" max="100" step="1" value="0"
+                                                           data-perspective="process" data-weight="0.3">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mt-3 pt-2 border-top">
+                                                <div class="d-flex justify-content-between">
+                                                    <span>Итого:</span>
+                                                    <span id="bsc_process_total">0%</span>
+                                                </div>
+                                                <div class="progress mt-2">
+                                                    <div class="progress-bar bg-warning" id="bsc_process_progress" 
+                                                         role="progressbar" style="width: 0%;" 
+                                                         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Обучение и развитие -->
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-danger text-white">
+                                            <h6 class="mb-0">Обучение и развитие</h6>
+                                            <small>Вес: 20%</small>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label for="bsc_learning_1" class="form-label">Обучение и тренинги</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control bsc-metric" id="bsc_learning_1" 
+                                                           name="BSC_Learning_1" min="0" max="100" step="1" value="0"
+                                                           data-perspective="learning" data-weight="0.4">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="bsc_learning_2" class="form-label">Развитие навыков</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control bsc-metric" id="bsc_learning_2" 
+                                                           name="BSC_Learning_2" min="0" max="100" step="1" value="0"
+                                                           data-perspective="learning" data-weight="0.3">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="bsc_learning_3" class="form-label">Инновационность</label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control bsc-metric" id="bsc_learning_3" 
+                                                           name="BSC_Learning_3" min="0" max="100" step="1" value="0"
+                                                           data-perspective="learning" data-weight="0.3">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mt-3 pt-2 border-top">
+                                                <div class="d-flex justify-content-between">
+                                                    <span>Итого:</span>
+                                                    <span id="bsc_learning_total">0%</span>
+                                                </div>
+                                                <div class="progress mt-2">
+                                                    <div class="progress-bar bg-danger" id="bsc_learning_progress" 
+                                                         role="progressbar" style="width: 0%;" 
+                                                         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="mb-0">Итоговая оценка BSC</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row align-items-center">
+                                                <div class="col-md-4">
+                                                    <h4 class="text-center mb-0">
+                                                        <span id="bsc_total_score">0</span>%
+                                                    </h4>
+                                                </div>
+                                                <div class="col-md-8">
+                                                    <div class="progress" style="height: 30px;">
+                                                        <div class="progress-bar bg-primary" id="bsc_total_progress" 
+                                                             role="progressbar" style="width: 0%;" 
+                                                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Управление по целям (MBO) -->
+                        <div id="mbo-model" class="evaluation-model-section" style="display: none;">
+                            <h5 class="border-bottom pb-2 mb-3">Управление по целям (MBO)</h5>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover" id="mbo-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 40%;">Цель</th>
+                                            <th style="width: 15%;">Вес</th>
+                                            <th style="width: 15%;">Достижение (%)</th>
+                                            <th style="width: 15%;">Результат</th>
+                                            <th style="width: 15%;">Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="mbo-goal-row">
+                                            <td>
+                                                <input type="text" class="form-control mbo-goal" name="MBO_Goal_0" 
+                                                       placeholder="Введите цель" required>
+                                            </td>
+                                            <td>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control mbo-weight" name="MBO_Weight_0" 
+                                                           min="0" max="100" step="5" value="25" required>
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control mbo-achievement" name="MBO_Achievement_0" 
+                                                           min="0" max="100" step="5" value="0" required>
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="progress">
+                                                    <div class="progress-bar bg-info mbo-result" role="progressbar" 
+                                                         style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                        0%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-danger btn-sm mbo-remove-btn">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="5">
+                                                <button type="button" class="btn btn-primary btn-sm" id="mbo-add-goal-btn">
+                                                    <i class="fas fa-plus me-1"></i> Добавить цель
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr class="table-secondary">
+                                            <th>Общий вес:</th>
+                                            <th>
+                                                <span id="mbo-total-weight">25</span>%
+                                                <div id="mbo-weight-warning" class="text-danger" style="display: none;">
+                                                    <small>Сумма весов должна быть 100%</small>
+                                                </div>
+                                            </th>
+                                            <th>Итоговый результат:</th>
+                                            <th colspan="2">
+                                                <div class="progress">
+                                                    <div class="progress-bar bg-success" id="mbo-total-progress" 
+                                                         role="progressbar" style="width: 0%;" 
+                                                         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                        0%
+                                                    </div>
+                                                </div>
+                                            </th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Ключевые показатели эффективности (KPI) -->
+                        <div id="kpi-model" class="evaluation-model-section" style="display: none;">
+                            <h5 class="border-bottom pb-2 mb-3">Ключевые показатели эффективности (KPI)</h5>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i> 
+                                <strong>Выберите категорию KPI в зависимости от должности сотрудника.</strong>
+                            </div>
+                            
+                            <ul class="nav nav-tabs mb-4" id="kpiTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="front-office-tab" data-bs-toggle="tab" 
+                                            data-bs-target="#front-office" type="button" role="tab">
+                                        Фронт-офис
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="loan-officer-tab" data-bs-toggle="tab" 
+                                            data-bs-target="#loan-officer" type="button" role="tab">
+                                        Кредитные специалисты
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="back-office-tab" data-bs-toggle="tab" 
+                                            data-bs-target="#back-office" type="button" role="tab">
+                                        Бэк-офис
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="common-kpi-tab" data-bs-toggle="tab" 
+                                            data-bs-target="#common-kpi" type="button" role="tab">
+                                        Общие KPI
+                                    </button>
+                                </li>
+                            </ul>
+                            
+                            <div class="tab-content" id="kpiTabContent">
+                                <!-- Фронт-офис KPI -->
+                                <div class="tab-pane fade show active" id="front-office" role="tabpanel">
+                                    <div class="row g-3">
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Клиенты и операции</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label for="kpi_clients_served" class="form-label">Обслужено клиентов</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric" 
+                                                                   id="kpi_clients_served" name="KPI_ClientsServed"
+                                                                   min="0" value="0" data-category="front" data-weight="0.25">
+                                                            <span class="input-group-text">чел.</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 80+</div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label for="kpi_avg_service_time" class="form-label">Среднее время обслуживания</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric-inverse" 
+                                                                   id="kpi_avg_service_time" name="KPI_AvgServiceTime"
+                                                                   min="0" value="15" data-category="front" data-weight="0.15">
+                                                            <span class="input-group-text">м<span class="input-group-text">мин.</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 10 мин или меньше</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Продажи и продукты</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label for="kpi_new_accounts" class="form-label">Открыто новых счетов</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric" 
+                                                                   id="kpi_new_accounts" name="KPI_NewAccounts"
+                                                                   min="0" value="0" data-category="front" data-weight="0.2">
+                                                            <span class="input-group-text">шт.</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 15+</div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label for="kpi_products_sold" class="form-label">Продано продуктов</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric" 
+                                                                   id="kpi_products_sold" name="KPI_ProductsSold"
+                                                                   min="0" value="0" data-category="front" data-weight="0.2">
+                                                            <span class="input-group-text">шт.</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 10+</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Качество обслуживания</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label for="kpi_client_satisfaction" class="form-label">Индекс удовлетворенности</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric" 
+                                                                   id="kpi_client_satisfaction" name="KPI_ClientSatisfaction"
+                                                                   min="0" max="10" step="0.1" value="0" data-category="front" data-weight="0.2">
+                                                            <span class="input-group-text">/ 10</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 8.5+</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Кредитные специалисты KPI -->
+                                <div class="tab-pane fade" id="loan-officer" role="tabpanel">
+                                    <div class="row g-3">
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Выдача кредитов</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label for="kpi_loans_processed" class="form-label">Обработано кредитов</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric" 
+                                                                   id="kpi_loans_processed" name="KPI_LoansProcessed"
+                                                                   min="0" value="0" data-category="loan" data-weight="0.3">
+                                                            <span class="input-group-text">шт.</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 20+</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Кредитный портфель</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label for="kpi_loan_amount" class="form-label">Объем выданных кредитов</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric" 
+                                                                   id="kpi_loan_amount" name="KPI_LoanAmount"
+                                                                   min="0" value="0" data-category="loan" data-weight="0.3">
+                                                            <span class="input-group-text">тыс.</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 10 000+ тыс.</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Качество портфеля</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label for="kpi_loan_quality" class="form-label">Качество кредитного портфеля</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric" 
+                                                                   id="kpi_loan_quality" name="KPI_LoanQuality"
+                                                                   min="0" max="100" step="0.1" value="0" data-category="loan" data-weight="0.4">
+                                                            <span class="input-group-text">%</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 95%+</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Бэк-офис KPI -->
+                                <div class="tab-pane fade" id="back-office" role="tabpanel">
+                                    <div class="row g-3">
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Объем работы</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label for="kpi_operations_processed" class="form-label">Обработано операций</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric" 
+                                                                   id="kpi_operations_processed" name="KPI_OperationsProcessed"
+                                                                   min="0" value="0" data-category="back" data-weight="0.3">
+                                                            <span class="input-group-text">шт.</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 100+</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Качество работы</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label for="kpi_error_count" class="form-label">Количество ошибок</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric-inverse" 
+                                                                   id="kpi_error_count" name="KPI_ErrorCount"
+                                                                   min="0" value="0" data-category="back" data-weight="0.4">
+                                                            <span class="input-group-text">шт.</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 0 (меньше - лучше)</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Эффективность</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label for="kpi_processing_efficiency" class="form-label">Эффективность обработки</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric" 
+                                                                   id="kpi_processing_efficiency" name="KPI_ProcessingEfficiency"
+                                                                   min="0" max="100" step="0.1" value="0" data-category="back" data-weight="0.3">
+                                                            <span class="input-group-text">%</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 95%+</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Общие KPI -->
+                                <div class="tab-pane fade" id="common-kpi" role="tabpanel">
+                                    <div class="row g-3">
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Командная работа</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label for="kpi_teamwork" class="form-label">Оценка командной работы</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric" 
+                                                                   id="kpi_teamwork" name="KPI_Teamwork"
+                                                                   min="0" max="10" step="0.1" value="0" data-category="common" data-weight="0.3">
+                                                            <span class="input-group-text">/ 10</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 8+</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Обучение</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label for="kpi_training_hours" class="form-label">Часы обучения</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric" 
+                                                                   id="kpi_training_hours" name="KPI_TrainingHours"
+                                                                   min="0" value="0" data-category="common" data-weight="0.3">
+                                                            <span class="input-group-text">ч.</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 16+ часов</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Соблюдение правил</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label for="kpi_compliance" class="form-label">Уровень соблюдения</label>
+                                                        <div class="input-group">
+                                                            <input type="number" class="form-control kpi-metric" 
+                                                                   id="kpi_compliance" name="KPI_Compliance"
+                                                                   min="0" max="100" step="0.1" value="0" data-category="common" data-weight="0.4">
+                                                            <span class="input-group-text">%</span>
+                                                        </div>
+                                                        <div class="form-text">Цель: 100%</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-4">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0">Итоговый KPI</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-4">
+                                            <h4 class="text-center mb-0">
+                                                <span id="kpi_total_score">0</span>%
+                                            </h4>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="progress" style="height: 30px;">
+                                                <div class="progress-bar bg-primary" id="kpi_total_progress" 
+                                                     role="progressbar" style="width: 0%;" 
+                                                     aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -168,8 +824,10 @@
                 <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0">Информация о сотруднике</h5>
                 </div>
-                <div class="card-body" id="employeeInfoContent">
-                    <!-- AJAX-загружаемый контент сюда -->
+                <div class="card-body">
+                    <div class="row" id="employeeInfoContent">
+                        <!-- AJAX-загружаемый контент сюда -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -183,96 +841,77 @@
 
     <script>
         $(document).ready(function () {
-            // Обработка изменений в слайдерах оценок
-            $('.score-slider').on('input', function () {
+            // Переключение моделей оценки
+            $('#evaluationModel').on('change', function() {
+                // Скрыть все секции моделей
+                $('.evaluation-model-section').hide();
+                
+                // Показать выбранную модель
+                const selectedModel = $(this).val();
+                $('#' + selectedModel + '-model').show();
+                
+                // Пересчитать оценку для выбранной модели
+                recalculateScore();
+            });
+            
+            // Обработка изменений в стандартной модели
+            $('.score-input').on('input', function() {
                 const index = $(this).data('index');
                 const value = $(this).val();
-
-                // Обновляем значение
-                $(`#scoreValue_${index}`).text(value);
-
+                
                 // Обновляем прогресс-бар
-                $(`#progressResult_${index}`)
-                    .css('width', value + '%')
-                    .attr('aria-valuenow', value);
-
-                // Обновляем взвешенное значение
-                const weight = parseFloat($(`#CriteriaScores_${index}__Weight`).val());
-                const weightedScore = (weight * value).toFixed(1);
-                $(`#weightedScore_${index}`).text(weightedScore);
-
-                // Задаем цвет прогресс-бара в зависимости от значения
-                if (value >= 70) {
-                    $(`#progressResult_${index}`).removeClass('bg-warning bg-danger').addClass('bg-success');
-                } else if (value >= 50) {
-                    $(`#progressResult_${index}`).removeClass('bg-success bg-danger').addClass('bg-warning');
-                } else {
-                    $(`#progressResult_${index}`).removeClass('bg-success bg-warning').addClass('bg-danger');
-                }
-
+                updateStandardProgressBar(index, value);
+                
                 // Пересчитываем итоговую оценку
-                calculateTotalScore();
+                calculateStandardTotalScore();
             });
-
-            // Инициализация начальных цветов прогресс-баров
-            $('.score-slider').each(function() {
-                const index = $(this).data('index');
-                const value = $(this).val();
-
-                if (value >= 70) {
-                    $(`#progressResult_${index}`).removeClass('bg-warning bg-danger').addClass('bg-success');
-                } else if (value >= 50) {
-                    $(`#progressResult_${index}`).removeClass('bg-success bg-danger').addClass('bg-warning');
-                } else {
-                    $(`#progressResult_${index}`).removeClass('bg-success bg-warning').addClass('bg-danger');
+            
+            // Обработка изменений в BSC модели
+            $('.bsc-metric').on('input', function() {
+                // Получаем данные о перспективе
+                const perspective = $(this).data('perspective');
+                
+                // Пересчитываем перспективу
+                calculateBscPerspective(perspective);
+                
+                // Пересчитываем итоговую оценку BSC
+                calculateBscTotalScore();
+            });
+            
+            // Обработка изменений в MBO модели
+            $('#mbo-add-goal-btn').on('click', function() {
+                addMboGoal();
+            });
+            
+            // Делегирование события для динамически добавленных целей
+            $('#mbo-table').on('input', '.mbo-weight, .mbo-achievement', function() {
+                calculateMboScores();
+            });
+            
+            // Удаление цели MBO
+            $('#mbo-table').on('click', '.mbo-remove-btn', function() {
+                // Проверяем, что это не последняя строка
+                if ($('.mbo-goal-row').length > 1) {
+                    $(this).closest('tr').remove();
+                    calculateMboScores();
                 }
             });
-
-            // Первоначальный расчет общей оценки
-            calculateTotalScore();
-
-            // Функция расчета общей оценки с учетом весов
-            function calculateTotalScore() {
-                let totalScore = 0;
-                let totalWeight = 0;
-
-                // Проходим по всем критериям
-                for (let i = 0; i < @Model.CriteriaScores.Count; i++) {
-                    const score = parseFloat($(`#CriteriaScores_${i}__Score`).val());
-                    const weight = parseFloat($(`#CriteriaScores_${i}__Weight`).val());
-
-                    totalScore += score * weight;
-                    totalWeight += weight;
-                }
-
-                // Вычисляем средневзвешенное значение
-                const finalScore = totalWeight > 0 ? Math.round(totalScore / totalWeight * 10) / 10 : 0;
-
-                // Обновляем итоговый прогресс-бар
-                $('#totalProgressBar')
-                    .css('width', finalScore + '%')
-                    .attr('aria-valuenow', finalScore);
-
-                // Обновляем текст с итоговой оценкой
-                $('#finalScoreDisplay').text(finalScore.toFixed(1));
-
-                // Обновляем скрытое поле с итоговой оценкой
-                $('#finalScore').val(finalScore);
-
-                // Задаем цвет итогового прогресс-бара
-                if (finalScore >= 70) {
-                    $('#totalProgressBar').removeClass('bg-warning bg-danger').addClass('bg-success');
-                } else if (finalScore >= 50) {
-                    $('#totalProgressBar').removeClass('bg-success bg-danger').addClass('bg-warning');
-                } else {
-                    $('#totalProgressBar').removeClass('bg-success bg-warning').addClass('bg-danger');
-                }
-            }
-
-            // Обработка изменения выбора сотрудника
-            $('#employeeSelect').change(function() {
+            
+            // Обработка изменений в KPI модели
+            $('.kpi-metric, .kpi-metric-inverse').on('input', function() {
+                calculateKpiScores();
+            });
+            
+            // Обработчик изменения вкладки KPI
+            $('#kpiTabs button').on('click', function(e) {
+                // Пересчитать KPI после смены вкладки
+                setTimeout(calculateKpiScores, 100);
+            });
+            
+            // Обработка выбора сотрудника
+            $('#Evaluation_EmployeeId').on('change', function() {
                 const employeeId = $(this).val();
-
+                
                 if (employeeId) {
                     // AJAX-запрос для получения данных о сотруднике
                     $.ajax({
@@ -281,40 +920,38 @@
                         success: function(data) {
                             // Формируем HTML для отображения информации о сотруднике
                             const employeeHtml = `
-                                <div class="row">
-                                    <div class="col-md-3 text-center">
-                                        ${data.photoPath
-                                            ? `<img src="${data.photoPath}" alt="${data.fullName}" class="img-fluid rounded-circle mb-3" style="max-width: 150px; height: auto;">`
-                                            : `<div class="bg-light rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 150px; height: 150px;">
-                                                 <i class="fas fa-user fa-4x text-secondary"></i>
-                                               </div>`}
-                                        <h5>${data.fullName}</h5>
-                                        <p class="text-muted mb-0">${data.position}</p>
-                                        <p class="badge bg-primary">${data.departmentName}</p>
-                                    </div>
-                                    <div class="col-md-9">
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <dl class="row">
-                                                    <dt class="col-sm-4">Email:</dt>
-                                                    <dd class="col-sm-8">${data.email}</dd>
+                                <div class="col-md-3 text-center">
+                                    ${data.photoPath
+                                        ? `<img src="${data.photoPath}" alt="${data.fullName}" class="img-fluid rounded-circle mb-3" style="max-width: 150px; height: auto;">`
+                                        : `<div class="bg-light rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 150px; height: 150px;">
+                                             <i class="fas fa-user fa-4x text-secondary"></i>
+                                           </div>`}
+                                    <h5>${data.fullName}</h5>
+                                    <p class="text-muted mb-0">${data.position}</p>
+                                    <p class="badge bg-primary">${data.departmentName}</p>
+                                </div>
+                                <div class="col-md-9">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <dl class="row">
+                                                <dt class="col-sm-4">Email:</dt>
+                                                <dd class="col-sm-8">${data.email}</dd>
 
-                                                    <dt class="col-sm-4">Телефон:</dt>
-                                                    <dd class="col-sm-8">${data.phone}</dd>
+                                                <dt class="col-sm-4">Телефон:</dt>
+                                                <dd class="col-sm-8">${data.phone}</dd>
 
-                                                    <dt class="col-sm-4">Дата приема:</dt>
-                                                    <dd class="col-sm-8">${new Date(data.hireDate).toLocaleDateString()}</dd>
-                                                </dl>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <dl class="row">
-                                                    <dt class="col-sm-6">Баланс отпуска:</dt>
-                                                    <dd class="col-sm-6">${data.vacationBalance} дн.</dd>
+                                                <dt class="col-sm-4">Дата приема:</dt>
+                                                <dd class="col-sm-8">${new Date(data.hireDate).toLocaleDateString()}</dd>
+                                            </dl>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <dl class="row">
+                                                <dt class="col-sm-6">Баланс отпуска:</dt>
+                                                <dd class="col-sm-6">${data.vacationBalance} дн.</dd>
 
-                                                    <dt class="col-sm-6">Больничных:</dt>
-                                                    <dd class="col-sm-6">${data.sickLeaveUsed} дн.</dd>
-                                                </dl>
-                                            </div>
+                                                <dt class="col-sm-6">Больничных:</dt>
+                                                <dd class="col-sm-6">${data.sickLeaveUsed} дн.</dd>
+                                            </dl>
                                         </div>
                                     </div>
                                 </div>
@@ -334,33 +971,433 @@
                     $('#employeeInfoSection').hide();
                 }
             });
-
+            
             // Автоматический выбор сотрудника при загрузке страницы, если он уже выбран
-            if ($('#employeeSelect').val()) {
-                $('#employeeSelect').trigger('change');
+            if ($('#Evaluation_EmployeeId').val()) {
+                $('#Evaluation_EmployeeId').trigger('change');
+            }
+            
+            // Функция обновления прогресс-бара для стандартной модели
+            function updateStandardProgressBar(index, value) {
+                // Преобразуем в число
+                value = parseFloat(value);
+                if (isNaN(value)) value = 0;
+                
+                // Ограничиваем значение от 0 до 100
+                value = Math.max(0, Math.min(100, value));
+                
+                // Обновляем прогресс-бар
+                $(`#progressResult_${index}`)
+                    .css('width', value + '%')
+                    .attr('aria-valuenow', value)
+                    .text(value + '%');
+                
+                // Задаем цвет прогресс-бара в зависимости от значения
+                if (value >= 70) {
+                    $(`#progressResult_${index}`).removeClass('bg-warning bg-danger').addClass('bg-success');
+                } else if (value >= 50) {
+                    $(`#progressResult_${index}`).removeClass('bg-success bg-danger').addClass('bg-warning');
+                } else {
+                    $(`#progressResult_${index}`).removeClass('bg-success bg-warning').addClass('bg-danger');
+                }
+            }
+            
+            // Расчет общей оценки для стандартной модели
+            function calculateStandardTotalScore() {
+                let totalScore = 0;
+                let totalWeight = 0;
+                
+                // Проходим по всем критериям
+                for (let i = 0; i < @Model.CriteriaScores.Count; i++) {
+                    const score = parseFloat($(`#CriteriaScores_${i}__Score`).val());
+                    const weight = parseFloat($(`#CriteriaScores_${i}__Weight`).val());
+                    
+                    if (!isNaN(score) && !isNaN(weight)) {
+                        totalScore += score * weight;
+                        totalWeight += weight;
+                    }
+                }
+                
+                // Вычисляем средневзвешенное значение
+                const finalScore = totalWeight > 0 ? Math.round(totalScore / totalWeight) : 0;
+                
+                // Обновляем итоговый прогресс-бар
+                updateTotalProgressBar(finalScore);
+                
+                // Обновляем скрытое поле с итоговой оценкой
+                $('#finalScore').val(finalScore);
+            }
+            
+            // Расчет оценки для перспективы BSC
+            function calculateBscPerspective(perspective) {
+                let totalScore = 0;
+                let totalWeight = 0;
+                
+                // Находим все метрики для данной перспективы
+                $(`.bsc-metric[data-perspective="${perspective}"]`).each(function() {
+                    const value = parseFloat($(this).val());
+                    const weight = parseFloat($(this).data('weight'));
+                    
+                    if (!isNaN(value) && !isNaN(weight)) {
+                        // Нормализуем значение от 0 до 100
+                        let normalizedValue = value;
+                        
+                        // Ограничиваем для разных метрик
+                        switch($(this).attr('id')) {
+                            case 'bsc_financial_1': // Выполнение плана продаж
+                                normalizedValue = Math.min(100, value);
+                                break;
+                            case 'bsc_customer_1': // Удовлетворенность клиентов
+                                normalizedValue = value * 10; // Шкала 0-10 -> 0-100
+                                break;
+                            // Другие специфичные преобразования...
+                            default:
+                                normalizedValue = Math.min(100, value);
+                        }
+                        
+                        totalScore += normalizedValue * weight;
+                        totalWeight += weight;
+                    }
+                });
+                
+                // Вычисляем средневзвешенное значение
+                const perspectiveScore = totalWeight > 0 ? Math.round(totalScore / totalWeight) : 0;
+                
+                // Обновляем отображение
+                $(`#bsc_${perspective}_total`).text(perspectiveScore + '%');
+                $(`#bsc_${perspective}_progress`)
+                    .css('width', perspectiveScore + '%')
+                    .attr('aria-valuenow', perspectiveScore);
+                
+                return perspectiveScore;
+            }
+            
+            // Расчет общей оценки для BSC
+            function calculateBscTotalScore() {
+                // Рассчитываем оценки для всех перспектив
+                const financialScore = calculateBscPerspective('financial');
+                const customerScore = calculateBscPerspective('customer');
+                const processScore = calculateBscPerspective('process');
+                const learningScore = calculateBscPerspective('learning');
+                
+                // Рассчитываем взвешенную оценку
+                const totalScore = Math.round(
+                    financialScore * 0.3 + 
+                    customerScore * 0.25 + 
+                    processScore * 0.25 + 
+                    learningScore * 0.2
+                );
+                
+                // Обновляем отображение
+                $('#bsc_total_score').text(totalScore);
+                $('#bsc_total_progress')
+                    .css('width', totalScore + '%')
+                    .attr('aria-valuenow', totalScore);
+                
+                // Обновляем итоговую оценку
+                updateTotalProgressBar(totalScore);
+                $('#finalScore').val(totalScore);
+            }
+            
+            // Добавление новой цели в MBO
+            function addMboGoal() {
+                const rowCount = $('.mbo-goal-row').length;
+                const newRowIndex = rowCount;
+                
+                // Создаем новую строку
+                const newRow = `
+                    <tr class="mbo-goal-row">
+                        <td>
+                            <input type="text" class="form-control mbo-goal" name="MBO_Goal_${newRowIndex}" 
+                                   placeholder="Введите цель" required>
+                        </td>
+                        <td>
+                            <div class="input-group">
+                                <input type="number" class="form-control mbo-weight" name="MBO_Weight_${newRowIndex}" 
+                                       min="0" max="100" step="5" value="25" required>
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="input-group">
+                                <input type="number" class="form-control mbo-achievement" name="MBO_Achievement_${newRowIndex}" 
+                                       min="0" max="100" step="5" value="0" required>
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="progress">
+                                <div class="progress-bar bg-info mbo-result" role="progressbar" 
+                                     style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                    0%
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <button type="button" class<button type="button" class="btn btn-danger btn-sm mbo-remove-btn">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+
+                // Добавляем перед последней строкой таблицы
+                $(newRow).insertBefore('#mbo-table tbody tr:last');
+
+                // Пересчитываем оценки
+                calculateMboScores();
             }
 
-            // Валидация формы перед отправкой
-            $('#evaluationForm').on('submit', function(e) {
-                // Проверяем, выбран ли сотрудник
-                if (!$('#employeeSelect').val()) {
-                    alert('Пожалуйста, выберите сотрудника для оценки');
-                    e.preventDefault();
-                    return false;
+            // Расчет оценок для MBO
+            function calculateMboScores() {
+                let totalWeight = 0;
+                let weightedAchievement = 0;
+
+                // Проходим по всем строкам целей
+                $('.mbo-goal-row').each(function(index) {
+                    const weight = parseFloat($(this).find('.mbo-weight').val()) / 100;
+                    const achievement = parseFloat($(this).find('.mbo-achievement').val());
+
+                    if (!isNaN(weight) && !isNaN(achievement)) {
+                        totalWeight += weight;
+                        weightedAchievement += weight * achievement;
+
+                        // Обновляем прогресс-бар результата для этой цели
+                        $(this).find('.mbo-result')
+                            .css('width', achievement + '%')
+                            .attr('aria-valuenow', achievement)
+                            .text(achievement + '%');
+                    }
+                });
+
+                // Обновляем общий вес
+                $('#mbo-total-weight').text((totalWeight * 100).toFixed(0));
+
+                // Проверяем, что сумма весов близка к 1 (100%)
+                if (Math.abs(totalWeight - 1.0) > 0.05) {
+                    $('#mbo-weight-warning').show();
+                } else {
+                    $('#mbo-weight-warning').hide();
                 }
 
-                // Проверяем даты периода
-                const startDate = new Date($('#Summary_PeriodStart').val());
-                const endDate = new Date($('#Summary_PeriodEnd').val());
+                // Расчет итоговой оценки
+                const finalScore = Math.round(weightedAchievement);
 
-                if (startDate > endDate) {
-                    alert('Дата начала периода не может быть позже даты окончания');
-                    e.preventDefault();
-                    return false;
+                // Обновляем общий прогресс-бар
+                $('#mbo-total-progress')
+                    .css('width', finalScore + '%')
+                    .attr('aria-valuenow', finalScore)
+                    .text(finalScore + '%');
+
+                // Обновляем итоговую оценку формы
+                updateTotalProgressBar(finalScore);
+                $('#finalScore').val(finalScore);
+            }
+
+            // Расчет оценок для KPI
+            function calculateKpiScores() {
+                // Определяем активную вкладку
+                const activeTab = $('#kpiTabs .nav-link.active').attr('id');
+                let categoryScores = {};
+
+                // Категории KPI и их веса в общей оценке
+                const categories = {
+                    'front-office-tab': { category: 'front', weight: 0.8 },
+                    'loan-officer-tab': { category: 'loan', weight: 0.8 },
+                    'back-office-tab': { category: 'back', weight: 0.8 },
+                    'common-kpi-tab': { category: 'common', weight: 0.2 }
+                };
+
+                // Рассчитываем KPI для каждой категории
+                Object.keys(categories).forEach(function(tabId) {
+                    const category = categories[tabId].category;
+                    let totalScore = 0;
+                    let totalWeight = 0;
+
+                    // Обработка обычных метрик (больше - лучше)
+                    $(`.kpi-metric[data-category="${category}"]`).each(function() {
+                        const value = parseFloat($(this).val());
+                        const weight = parseFloat($(this).data('weight'));
+
+                        if (!isNaN(value) && !isNaN(weight)) {
+                            // Нормализация в зависимости от типа метрики
+                            let normalizedValue = 0;
+                            const id = $(this).attr('id');
+
+                            switch(id) {
+                                case 'kpi_clients_served':
+                                    normalizedValue = Math.min(100, value / 80 * 100);
+                                    break;
+                                case 'kpi_new_accounts':
+                                    normalizedValue = Math.min(100, value / 15 * 100);
+                                    break;
+                                case 'kpi_products_sold':
+                                    normalizedValue = Math.min(100, value / 10 * 100);
+                                    break;
+                                case 'kpi_client_satisfaction':
+                                    normalizedValue = Math.min(100, value / 10 * 100);
+                                    break;
+                                case 'kpi_loans_processed':
+                                    normalizedValue = Math.min(100, value / 20 * 100);
+                                    break;
+                                case 'kpi_loan_amount':
+                                    normalizedValue = Math.min(100, value / 10000 * 100);
+                                    break;
+                                case 'kpi_loan_quality':
+                                    normalizedValue = Math.min(100, value);
+                                    break;
+                                case 'kpi_operations_processed':
+                                    normalizedValue = Math.min(100, value / 100 * 100);
+                                    break;
+                                case 'kpi_processing_efficiency':
+                                    normalizedValue = Math.min(100, value);
+                                    break;
+                                case 'kpi_teamwork':
+                                    normalizedValue = Math.min(100, value / 10 * 100);
+                                    break;
+                                case 'kpi_training_hours':
+                                    normalizedValue = Math.min(100, value / 16 * 100);
+                                    break;
+                                case 'kpi_compliance':
+                                    normalizedValue = Math.min(100, value);
+                                    break;
+                                default:
+                                    normalizedValue = Math.min(100, value);
+                            }
+
+                            totalScore += normalizedValue * weight;
+                            totalWeight += weight;
+                        }
+                    });
+
+                    // Обработка обратных метрик (меньше - лучше)
+                    $(`.kpi-metric-inverse[data-category="${category}"]`).each(function() {
+                        const value = parseFloat($(this).val());
+                        const weight = parseFloat($(this).data('weight'));
+
+                        if (!isNaN(value) && !isNaN(weight)) {
+                            // Нормализация в зависимости от типа метрики
+                            let normalizedValue = 100; // Максимальное значение по умолчанию
+                            const id = $(this).attr('id');
+
+                            switch(id) {
+                                case 'kpi_avg_service_time':
+                                    // 10 минут или меньше считаем идеальным (100%), 20 минут - 0%
+                                    normalizedValue = Math.max(0, 100 - (value - 10) * 10);
+                                    break;
+                                case 'kpi_error_count':
+                                    // 0 ошибок - 100%, 10 ошибок - 0%
+                                    normalizedValue = Math.max(0, 100 - value * 10);
+                                    break;
+                                default:
+                                    normalizedValue = Math.max(0, 100 - value);
+                            }
+
+                            totalScore += normalizedValue * weight;
+                            totalWeight += weight;
+                        }
+                    });
+
+                    // Расчет среднего значения для категории
+                    const categoryScore = totalWeight > 0 ? Math.round(totalScore / totalWeight) : 0;
+                    categoryScores[category] = categoryScore;
+                });
+
+                // Определение итогового KPI на основе активной вкладки
+                let finalKpiScore = 0;
+                let primaryCategory = categories[activeTab].category;
+                let primaryWeight = categories[activeTab].weight;
+                let commonWeight = 0.2; // Вес общих KPI
+
+                // Рассчитываем итоговый KPI как взвешенную сумму активной категории и общих KPI
+                if (categoryScores[primaryCategory] !== undefined && categoryScores['common'] !== undefined) {
+                    finalKpiScore = Math.round(
+                        categoryScores[primaryCategory] * primaryWeight +
+                        categoryScores['common'] * commonWeight
+                    );
+                } else if (categoryScores[primaryCategory] !== undefined) {
+                    finalKpiScore = categoryScores[primaryCategory];
+                } else if (categoryScores['common'] !== undefined) {
+                    finalKpiScore = categoryScores['common'];
                 }
 
-                return true;
-            });
+                // Обновляем отображение
+                $('#kpi_total_score').text(finalKpiScore);
+                $('#kpi_total_progress')
+                    .css('width', finalKpiScore + '%')
+                    .attr('aria-valuenow', finalKpiScore);
+
+                // Обновляем итоговую оценку формы
+                updateTotalProgressBar(finalKpiScore);
+                $('#finalScore').val(finalKpiScore);
+            }
+
+            // Обновление общего прогресс-бара итоговой оценки
+            function updateTotalProgressBar(score) {
+                // Обеспечиваем, что значение - число и в допустимом диапазоне
+                score = parseFloat(score);
+                if (isNaN(score)) score = 0;
+                score = Math.max(0, Math.min(100, score));
+
+                // Обновляем прогресс-бар и текст
+                const progressBar = $('#totalProgressBar');
+                progressBar
+                    .css('width', score + '%')
+                    .attr('aria-valuenow', score)
+                    .text(score + '%');
+
+                // Устанавливаем цвет в зависимости от значения
+                if (score >= 70) {
+                    progressBar.removeClass('bg-warning bg-danger').addClass('bg-success');
+                } else if (score >= 50) {
+                    progressBar.removeClass('bg-success bg-danger').addClass('bg-warning');
+                } else {
+                    progressBar.removeClass('bg-success bg-warning').addClass('bg-danger');
+                }
+            }
+
+            // Общая функция пересчета оценки в зависимости от выбранной модели
+            function recalculateScore() {
+                const selectedModel = $('#evaluationModel').val();
+
+                switch(selectedModel) {
+                    case 'weighted':
+                        calculateStandardTotalScore();
+                        break;
+                    case 'balanced':
+                        calculateBscTotalScore();
+                        break;
+                    case 'mbo':
+                        calculateMboScores();
+                        break;
+                    case 'kpi':
+                        calculateKpiScores();
+                        break;
+                }
+            }
+
+            // Инициализация на странице
+            function initializeForm() {
+                // Инициализировать стандартную модель
+                $('.score-input').each(function() {
+                    const index = $(this).data('index');
+                    const value = $(this).val();
+                    updateStandardProgressBar(index, value);
+                });
+                calculateStandardTotalScore();
+
+                // Инициализировать модель BSC
+                calculateBscTotalScore();
+
+                // Инициализировать модель MBO
+                calculateMboScores();
+
+                // Инициализировать модель KPI
+                calculateKpiScores();
+            }
+
+            // Вызвать инициализацию формы
+            initializeForm();
         });
     </script>
 }

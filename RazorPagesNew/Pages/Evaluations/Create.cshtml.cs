@@ -1,28 +1,25 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
 using RazorPagesNew.ModelsDb;
 using RazorPagesNew.Services.Interfaces;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace RazorPagesNew.Pages.Evaluations
 {
     public class CreateModel : PageModel
     {
-        private readonly MyApplicationDbContext _context;
+        private readonly IEmployeeService _employeeService;
         private readonly IEvaluationService _evaluationService;
         private readonly IUserService _userService;
 
         public CreateModel(
-            MyApplicationDbContext context,
+            IEmployeeService employeeService,
             IEvaluationService evaluationService,
             IUserService userService)
         {
-            _context = context;
+            _employeeService = employeeService;
             _evaluationService = evaluationService;
             _userService = userService;
         }
@@ -34,194 +31,202 @@ namespace RazorPagesNew.Pages.Evaluations
         public WorkActivitySummary Summary { get; set; }
 
         [BindProperty]
-        public List<CriterionScoreViewModel> CriteriaScores { get; set; }
+        public List<CriteriaScoreViewModel> CriteriaScores { get; set; }
+
+        [BindProperty]
+        public string EvaluationModel { get; set; } = "weighted";
+
+        // BSC дополнительные поля
+        [BindProperty]
+        public double BSC_Financial_1 { get; set; }
+        [BindProperty]
+        public double BSC_Financial_2 { get; set; }
+        [BindProperty]
+        public double BSC_Financial_3 { get; set; }
+        [BindProperty]
+        public double BSC_Customer_1 { get; set; }
+        [BindProperty]
+        public double BSC_Customer_2 { get; set; }
+        [BindProperty]
+        public double BSC_Customer_3 { get; set; }
+        [BindProperty]
+        public double BSC_Process_1 { get; set; }
+        [BindProperty]
+        public double BSC_Process_2 { get; set; }
+        [BindProperty]
+        public double BSC_Process_3 { get; set; }
+        [BindProperty]
+        public double BSC_Learning_1 { get; set; }
+        [BindProperty]
+        public double BSC_Learning_2 { get; set; }
+        [BindProperty]
+        public double BSC_Learning_3 { get; set; }
+
+        // KPI дополнительные поля
+        [BindProperty]
+        public List<KpiMetricViewModel> KpiMetrics { get; set; }
+
+        // MBO дополнительные поля
+        [BindProperty]
+        public List<MboGoalViewModel> MboGoals { get; set; }
 
         public SelectList EmployeeList { get; set; }
 
-        public string ErrorMessage { get; set; }
-
-        public class CriterionScoreViewModel
+        public async Task<IActionResult> OnGetAsync(int? employeeId)
         {
-            public int CriterionId { get; set; }
-            public string CriterionName { get; set; }
-            public double Weight { get; set; }
-            public double Score { get; set; }
-            public double WeightedScore => Weight * Score;
-        }
+            await LoadEmployeeListAsync();
+            await LoadCriteriaAsync();
 
-        public async Task<IActionResult> OnGetAsync(int? employeeId = null)
-        {
-            // Получение списка сотрудников без использования навигационных свойств
-            var employees = await _context.Employees
-                .Select(e => new
-                {
-                    e.Id,
-                    DisplayName = e.FullName + " (" + e.Position + ")"
-                })
-                .OrderBy(e => e.DisplayName)
-                .ToListAsync();
-
-            EmployeeList = new SelectList(employees, "Id", "DisplayName");
-
-            // Инициализация объекта оценки
             Evaluation = new EmployeeEvaluation
             {
-                EvaluationDate = DateTime.Now,
-                Score = 0
+                EvaluationDate = System.DateTime.UtcNow
             };
 
-            // Установка выбранного сотрудника, если передан ID
+            Summary = new WorkActivitySummary
+            {
+                PeriodStart = System.DateTime.UtcNow.AddMonths(-1),
+                PeriodEnd = System.DateTime.UtcNow
+            };
+
             if (employeeId.HasValue)
             {
                 Evaluation.EmployeeId = employeeId.Value;
             }
-
-            // Инициализация объекта сводки активности
-            Summary = new WorkActivitySummary
-            {
-                PeriodStart = DateTime.Now.AddMonths(-1),
-                PeriodEnd = DateTime.Now
-            };
-
-            // Загрузка критериев оценки
-            var criteria = await _context.EvaluationCriteria
-                .OrderBy(c => c.Name)
-                .ToListAsync();
-
-            CriteriaScores = criteria.Select(c => new CriterionScoreViewModel
-            {
-                CriterionId = c.Id,
-                CriterionName = c.Name,
-                Weight = c.Weight,
-                Score = 50 // Начальное значение по умолчанию (средняя оценка)
-            }).ToList();
 
             return Page();
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
+           /* if (!ModelState.IsValid)
             {
-                // Перезагрузка списка сотрудников
-                var employees = await _context.Employees
-                    .Select(e => new
-                    {
-                        e.Id,
-                        DisplayName = e.FullName + " (" + e.Position + ")"
-                    })
-                    .OrderBy(e => e.DisplayName)
-                    .ToListAsync();
+                await LoadEmployeeListAsync();
+                await LoadCriteriaAsync();
+                return Page();
+            }*/
 
-                EmployeeList = new SelectList(employees, "Id", "DisplayName");
+            // Получаем текущего пользователя
+            var currentUser = await _userService.GetCurrentUserAsync(User);
+            if (currentUser == null)
+            {
+                ModelState.AddModelError(string.Empty, "Невозможно идентифицировать текущего пользователя");
+                await LoadEmployeeListAsync();
+                await LoadCriteriaAsync();
                 return Page();
             }
 
-            try
+            // Создаем сводку активности сотрудника
+            var summary = await _evaluationService.CreateWorkActivitySummaryAsync(await _evaluationService.GenerateWorkActivitySummaryAsync(
+                Evaluation.EmployeeId,
+                Summary.PeriodStart,
+                Summary.PeriodEnd, currentUser.Id));
+
+            
+            // Устанавливаем поля для оценки
+            Evaluation.EvaluatorId = currentUser.Id;
+            Evaluation.SummaryId = summary.Id;
+            Evaluation.OwnerId = currentUser.Id;
+
+            // Создаем оценку
+            var createdEvaluation = await _evaluationService.CreateEvaluationAsync(Evaluation);
+
+            // Создаем оценки по критериям в зависимости от модели оценки
+            if (EvaluationModel == "weighted")
             {
-                // Получаем текущего пользователя
-                var currentUser = await _userService.GetCurrentUserAsync(User);
-                if (currentUser == null)
+                await CreateStandardScoresAsync(createdEvaluation.Id);
+            }
+            else
+            {
+                // Для других моделей используем только общий балл
+                // Дополнительную информацию сохраняем в примечаниях
+                string modelInfo = "";
+
+                switch (EvaluationModel)
                 {
-                    ErrorMessage = "Не удалось определить текущего пользователя.";
-                    return Page();
+                    case "balanced":
+                        modelInfo = "Сбалансированная система показателей (BSC)";
+                        break;
+                    case "mbo":
+                        modelInfo = "Управление по целям (MBO)";
+                        break;
+                    case "kpi":
+                        modelInfo = "Ключевые показатели эффективности (KPI)";
+                        break;
                 }
 
-                // Устанавливаем информацию о владельце
-                Evaluation.EvaluatorId = currentUser.Id;
-                Evaluation.OwnerId = currentUser.Id;
-                Summary.OwnerId = currentUser.Id;
-                Summary.EmployeeId = Evaluation.EmployeeId;
-
-                // Генерация сводки активности для периода оценки
-                using (var transaction = await _context.Database.BeginTransactionAsync())
+                // Добавляем информацию о модели в примечания
+                if (!string.IsNullOrEmpty(modelInfo))
                 {
-                    try
-                    {
-                        // Сохранение сводки активности
-                        Summary.CreatedAt = DateTime.Now;
-                        await _context.WorkActivitySummaries.AddAsync(Summary);
-                        await _context.SaveChangesAsync();
+                    Evaluation.Notes = $"[{modelInfo}] {Evaluation.Notes}";
 
-                        // Устанавливаем ID сводки в оценку
-                        Evaluation.SummaryId = Summary.Id;
-
-                        // Рассчитываем итоговую оценку на основе взвешенных оценок по критериям
-                        double totalScore = 0;
-                        double totalWeight = 0;
-
-                        foreach (var criterionScore in CriteriaScores)
-                        {
-                            totalScore += criterionScore.Score * criterionScore.Weight;
-                            totalWeight += criterionScore.Weight;
-                        }
-
-                        // Вычисляем итоговый балл (учитываем случай, когда сумма весов может быть не равна 1)
-                        Evaluation.Score = totalWeight > 0 ? Math.Round(totalScore / totalWeight, 1) : 0;
-
-                        // Устанавливаем дату создания
-                        Evaluation.CreatedAt = DateTime.Now;
-
-                        // Сохранение оценки
-                        await _context.EmployeeEvaluations.AddAsync(Evaluation);
-                        await _context.SaveChangesAsync();
-
-                        // Сохранение оценок по критериям
-                        foreach (var criterionScore in CriteriaScores)
-                        {
-                            var score = new EvaluationScore
-                            {
-                                EvaluationId = Evaluation.Id,
-                                CriterionId = criterionScore.CriterionId,
-                                Score = criterionScore.Score,
-                                CreatedAt = DateTime.Now
-                            };
-
-                            await _context.EvaluationScores.AddAsync(score);
-                        }
-
-                        await _context.SaveChangesAsync();
-                        await transaction.CommitAsync();
-
-                        return RedirectToPage("./Details", new { id = Evaluation.Id });
-                    }
-                    catch (Exception ex)
-                    {
-                        await transaction.RollbackAsync();
-                        ErrorMessage = $"Ошибка при сохранении оценки: {ex.Message}";
-
-                        // Перезагрузка списка сотрудников
-                        var employees = await _context.Employees
-                            .Select(e => new
-                            {
-                                e.Id,
-                                DisplayName = e.FullName + " (" + e.Position + ")"
-                            })
-                            .OrderBy(e => e.DisplayName)
-                            .ToListAsync();
-
-                        EmployeeList = new SelectList(employees, "Id", "DisplayName");
-                        return Page();
-                    }
+                    // Обновляем запись с примечанием
+                    await _evaluationService.UpdateEvaluationAsync(Evaluation);
                 }
             }
-            catch (Exception ex)
+
+            return RedirectToPage("./Details", new { id = createdEvaluation.Id });
+        }
+
+        private async Task CreateStandardScoresAsync(int evaluationId)
+        {
+            foreach (var criteriaScore in CriteriaScores)
             {
-                ErrorMessage = $"Произошла ошибка: {ex.Message}";
-
-                // Перезагрузка списка сотрудников
-                var employees = await _context.Employees
-                    .Select(e => new
-                    {
-                        e.Id,
-                        DisplayName = e.FullName + " (" + e.Position + ")"
-                    })
-                    .OrderBy(e => e.DisplayName)
-                    .ToListAsync();
-
-                EmployeeList = new SelectList(employees, "Id", "DisplayName");
-                return Page();
+                await _evaluationService.CreateScoreAsync(new EvaluationScore
+                {
+                    EvaluationId = evaluationId,
+                    CriterionId = criteriaScore.CriterionId,
+                    Score = criteriaScore.Score
+                });
             }
+        }
+
+        private async Task LoadCriteriaAsync()
+        {
+            CriteriaScores = new List<CriteriaScoreViewModel>();
+
+            var criteria = await _evaluationService.GetAllCriteriaAsync();
+            foreach (var criterion in criteria)
+            {
+                CriteriaScores.Add(new CriteriaScoreViewModel
+                {
+                    CriterionId = criterion.Id,
+                    CriterionName = criterion.Name,
+                    Weight = criterion.Weight,
+                    Score = 0
+                });
+            }
+        }
+
+        private async Task LoadEmployeeListAsync()
+        {
+            var employees = await _employeeService.GetAllEmployeesAsync();
+            EmployeeList = new SelectList(employees, "Id", "FullName");
+        }
+
+        // Модели для представления данных на странице
+
+        public class CriteriaScoreViewModel
+        {
+            public int CriterionId { get; set; }
+            public string CriterionName { get; set; }
+            public double Weight { get; set; }
+            public double Score { get; set; }
+        }
+
+        public class KpiMetricViewModel
+        {
+            public string Name { get; set; }
+            public string Category { get; set; }
+            public double Value { get; set; }
+            public double Weight { get; set; }
+            public bool IsInverse { get; set; }
+        }
+
+        public class MboGoalViewModel
+        {
+            public string Goal { get; set; }
+            public double Weight { get; set; }
+            public double Achievement { get; set; }
         }
     }
 }
