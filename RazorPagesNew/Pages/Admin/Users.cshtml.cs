@@ -40,6 +40,7 @@ namespace RazorPagesNew.Pages.Admin
 
         public async Task<IActionResult> OnGetAsync()
         {
+            await _roleSyncService.SynchronizeUsersAsync();
             await LoadDataAsync();
             return Page();
         }
@@ -64,7 +65,6 @@ namespace RazorPagesNew.Pages.Admin
                     return RedirectToPage();
                 }
             }
-
             // Получаем текущие роли пользователя
             var userRoles = await _identityUserManager.GetRolesAsync(user);
 

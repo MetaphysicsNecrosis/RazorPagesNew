@@ -1,0 +1,283 @@
+﻿@page
+@model RazorPagesNew.Pages.Activity.TaskCreateModel
+@{
+    ViewData["Title"] = "Создание новой задачи";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Создание новой задачи</h5>
+                    <a asp-page="./Tasks" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left"></i> К списку задач
+                    </a>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        var statusClass = Model.StatusMessage.Contains("Ошибка") ? "danger" : "success";
+                        <div class="alert alert-@statusClass alert-dismissible fade show" role="alert">
+                            @Model.StatusMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <form method="post" class="needs-validation" novalidate>
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Информация о сотруднике</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label asp-for="Input.EmployeeId" class="form-label"></label>
+                                            <div class="input-group">
+                                                <select asp-for="Input.EmployeeId" asp-items="Model.EmployeeList" class="form-select" required>
+                                                    <option value="">-- Выберите сотрудника --</option>
+                                                </select>
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#selectEmployeeModal">
+                                                    <i class="fas fa-search"></i>
+                                                </button>
+                                            </div>
+                                            <span asp-validation-for="Input.EmployeeId" class="text-danger"></span>
+                                            <div class="form-text">Выберите сотрудника, который выполнил задачу</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Параметры задачи</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label asp-for="Input.Importance" class="form-label"></label>
+                                            <select asp-for="Input.Importance" asp-items="Model.ImportanceList" class="form-select">
+                                            </select>
+                                            <span asp-validation-for="Input.Importance" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="Input.CompletedAt" class="form-label"></label>
+                                            <input asp-for="Input.CompletedAt" class="form-control" type="datetime-local" value="@Model.Input.CompletedAt.ToString("yyyy-MM-ddTHH:mm")" required />
+                                            <span asp-validation-for="Input.CompletedAt" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="Input.EfficiencyScore" class="form-label"></label>
+                                            <div class="input-group">
+                                                <input asp-for="Input.EfficiencyScore" class="form-control" type="number" min="0" max="100" step="0.1" />
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                            <span asp-validation-for="Input.EfficiencyScore" class="text-danger"></span>
+                                            <div class="form-text">Оценка эффективности выполнения задачи (от 0 до 100)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Информация о задаче</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label asp-for="Input.Title" class="form-label"></label>
+                                    <input asp-for="Input.Title" class="form-control" required />
+                                    <span asp-validation-for="Input.Title" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Input.Description" class="form-label"></label>
+                                    <textarea asp-for="Input.Description" class="form-control" rows="4"></textarea>
+                                    <span asp-validation-for="Input.Description" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Input.ExternalSystemId" class="form-label"></label>
+                                    <input asp-for="Input.ExternalSystemId" class="form-control" />
+                                    <span asp-validation-for="Input.ExternalSystemId" class="text-danger"></span>
+                                    <div class="form-text">ID задачи во внешней системе (например, JIRA, Trello)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-page="./Tasks" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i> Отмена
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Создать задачу
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для выбора сотрудника -->
+<div class="modal fade" id="selectEmployeeModal" tabindex="-1" aria-labelledby="selectEmployeeModalLabel" aria-hidden="true">
+<div class="modal-dialog modal-lg">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="selectEmployeeModalLabel">Выбор сотрудника</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <label for="departmentFilter" class="form-label">Фильтр по отделу</label>
+                <select id="departmentFilter" class="form-select" asp-items="Model.DepartmentList" onchange="filterEmployeesByDepartment()">
+                    <option value="">Все отделы</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" id="employeeSearch" class="form-control" placeholder="Поиск сотрудника..." oninput="filterEmployees()">
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                <table class="table table-hover" id="employeeTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ФИО</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.EmployeeList)
+                        {
+                            <tr class="employee-row" data-employee-id="@item.Value" data-employee-name="@item.Text">
+                                <td>@item.Text</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="selectEmployee('@item.Value', '@item.Text')" data-bs-dismiss="modal">
+                                        Выбрать
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+        </div>
+    </div>
+</div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        // Валидация формы
+        (function () {
+            'use strict'
+
+            // Получение всех форм, к которым мы хотим применить пользовательские стили валидации Bootstrap
+            var forms = document.querySelectorAll('.needs-validation')
+
+            // Циклический проход по ним и предотвращение отправки
+            Array.prototype.slice.call(forms)
+                .forEach(function (form) {
+                    form.addEventListener('submit', function (event) {
+                        if (!form.checkValidity()) {
+                            event.preventDefault()
+                            event.stopPropagation()
+                        }
+
+                        form.classList.add('was-validated')
+                    }, false)
+                })
+        })()
+
+        // Функция для фильтрации сотрудников по отделу
+        function filterEmployeesByDepartment() {
+            const departmentId = document.getElementById('departmentFilter').value;
+
+            // Если выбран отдел, получаем сотрудников этого отдела
+            if (departmentId) {
+                fetch(`?handler=EmployeesByDepartment&departmentId=${departmentId}`)
+                    .then(response => response.json())
+                    .then(employees => {
+                        updateEmployeeTable(employees);
+                    });
+            } else {
+                // Если отдел не выбран, показываем всех сотрудников
+                document.querySelectorAll('.employee-row').forEach(row => {
+                    row.style.display = '';
+                });
+            }
+        }
+
+        // Функция для фильтрации сотрудников по поисковому запросу
+        function filterEmployees() {
+            const searchTerm = document.getElementById('employeeSearch').value.toLowerCase();
+
+            document.querySelectorAll('.employee-row').forEach(row => {
+                const employeeName = row.getAttribute('data-employee-name').toLowerCase();
+
+                if (employeeName.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Функция для обновления таблицы сотрудников
+        function updateEmployeeTable(employees) {
+            const tableBody = document.querySelector('#employeeTable tbody');
+            tableBody.innerHTML = '';
+
+            employees.forEach(employee => {
+                const row = document.createElement('tr');
+                row.className = 'employee-row';
+                row.setAttribute('data-employee-id', employee.id);
+                row.setAttribute('data-employee-name', employee.fullName);
+
+                const nameCell = document.createElement('td');
+                nameCell.textContent = employee.fullName;
+                row.appendChild(nameCell);
+
+                const departmentCell = document.createElement('td');
+                departmentCell.textContent = employee.departmentName || '';
+                row.appendChild(departmentCell);
+
+                const positionCell = document.createElement('td');
+                positionCell.textContent = employee.position || '';
+                row.appendChild(positionCell);
+
+                const actionCell = document.createElement('td');
+                const selectButton = document.createElement('button');
+                selectButton.type = 'button';
+                selectButton.className = 'btn btn-sm btn-primary';
+                selectButton.textContent = 'Выбрать';
+                selectButton.setAttribute('onclick', `selectEmployee('${employee.id}', '${employee.fullName}')`);
+                selectButton.setAttribute('data-bs-dismiss', 'modal');
+                actionCell.appendChild(selectButton);
+                row.appendChild(actionCell);
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Функция для выбора сотрудника
+        function selectEmployee(id, name) {
+            document.getElementById('Input_EmployeeId').value = id;
+        }
+    </script>
+}

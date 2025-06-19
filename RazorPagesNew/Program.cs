@@ -117,7 +117,13 @@ builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 // Add this line to the Program.cs file where other services are registered
 builder.Services.AddScoped<IEmployeeImportService, EmployeeImportService>();
+// Сервисы для работы с задачами
+builder.Services.AddScoped<ITaskRecordService, TaskRecordService>();
+builder.Services.AddScoped<ITaskRecordImportService, TaskRecordImportService>();
+builder.Services.AddScoped<ITaskRecordExportService, TaskRecordExportService>();
 
+// NPOI для работы с Excel
+builder.Services.AddScoped<NPOI.SS.UserModel.IWorkbook, NPOI.XSSF.UserModel.XSSFWorkbook>();
 // Настройка политики CORS
 var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>();
 

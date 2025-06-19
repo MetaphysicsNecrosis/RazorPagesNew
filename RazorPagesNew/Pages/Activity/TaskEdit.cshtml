@@ -1,0 +1,181 @@
+﻿@page "{id:int}"
+@model RazorPagesNew.Pages.Activity.TaskEditModel
+@{
+    ViewData["Title"] = "Редактирование задачи";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Редактирование задачи</h5>
+                    <div>
+                        <a asp-page="./TaskDetails" asp-route-id="@Model.Input.Id" class="btn btn-light btn-sm me-2">
+                            <i class="fas fa-eye"></i> Просмотр
+                        </a>
+                        <a asp-page="./Tasks" class="btn btn-light btn-sm">
+                            <i class="fas fa-arrow-left"></i> К списку задач
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        var statusClass = Model.StatusMessage.Contains("Ошибка") ? "danger" : "success";
+                        <div class="alert alert-@statusClass alert-dismissible fade show" role="alert">
+                            @Model.StatusMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <form method="post" class="needs-validation" novalidate>
+                        <input type="hidden" asp-for="Input.Id" />
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Данные задачи</h6>
+                                        <span class="badge bg-secondary">ID: @Model.Input.Id</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label asp-for="Input.Title" class="form-label"></label>
+                                            <input asp-for="Input.Title" class="form-control" required />
+                                            <span asp-validation-for="Input.Title" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="Input.Description" class="form-label"></label>
+                                            <textarea asp-for="Input.Description" class="form-control" rows="5"></textarea>
+                                            <span asp-validation-for="Input.Description" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="Input.ExternalSystemId" class="form-label"></label>
+                                            <input asp-for="Input.ExternalSystemId" class="form-control" />
+                                            <span asp-validation-for="Input.ExternalSystemId" class="text-danger"></span>
+                                            <div class="form-text">ID задачи во внешней системе (например, JIRA, Trello)</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card mt-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Служебная информация</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-2">
+                                                    <div class="fw-bold text-muted small">Создана</div>
+                                                    <div>@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-2">
+                                                    <div class="fw-bold text-muted small">Автор</div>
+                                                    <div>@Model.CreatorName</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Назначение и параметры</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label asp-for="Input.EmployeeId" class="form-label"></label>
+                                            <select asp-for="Input.EmployeeId" asp-items="Model.EmployeeList" class="form-select" required>
+                                                <option value="">-- Выберите сотрудника --</option>
+                                            </select>
+                                            <span asp-validation-for="Input.EmployeeId" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="Input.CompletedAt" class="form-label"></label>
+                                            <input asp-for="Input.CompletedAt" class="form-control" type="datetime-local" value="@Model.Input.CompletedAt.ToString("yyyy-MM-ddTHH:mm")" required />
+                                            <span asp-validation-for="Input.CompletedAt" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="Input.Importance" class="form-label"></label>
+                                            <select asp-for="Input.Importance" asp-items="Model.ImportanceList" class="form-select">
+                                            </select>
+                                            <span asp-validation-for="Input.Importance" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="Input.EfficiencyScore" class="form-label"></label>
+                                            <div class="input-group">
+                                                <input asp-for="Input.EfficiencyScore" class="form-control" type="number" min="0" max="100" step="0.1" />
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                            <span asp-validation-for="Input.EfficiencyScore" class="text-danger"></span>
+                                            <div class="form-text">Оценка эффективности выполнения задачи (от 0 до 100)</div>
+                                        </div>
+
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Изменение эффективности выполнения задачи может повлиять на общую оценку сотрудника.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <a asp-page="./TaskDetails" asp-route-id="@Model.Input.Id" class="btn btn-secondary">
+                                    <i class="fas fa-times me-1"></i> Отмена
+                                </a>
+                                <a asp-page="/Employees/Details" asp-route-id="@Model.Input.EmployeeId" class="btn btn-outline-primary ms-2">
+                                    <i class="fas fa-user me-1"></i> Профиль сотрудника
+                                </a>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Сохранить изменения
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        // Валидация формы
+        (function () {
+            'use strict'
+
+            // Получение всех форм, к которым мы хотим применить пользовательские стили валидации Bootstrap
+            var forms = document.querySelectorAll('.needs-validation')
+
+            // Циклический проход по ним и предотвращение отправки
+            Array.prototype.slice.call(forms)
+                .forEach(function (form) {
+                    form.addEventListener('submit', function (event) {
+                        if (!form.checkValidity()) {
+                            event.preventDefault()
+                            event.stopPropagation()
+                        }
+
+                        form.classList.add('was-validated')
+                    }, false)
+                })
+        })()
+    </script>
+}

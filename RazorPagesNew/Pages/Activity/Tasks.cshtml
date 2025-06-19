@@ -1,0 +1,363 @@
+﻿@page
+@model RazorPagesNew.Pages.Activity.TasksModel
+@{
+    ViewData["Title"] = "Задачи сотрудников";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Задачи сотрудников</h5>
+                    <div>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-file-export me-1"></i> Экспорт
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" asp-page-handler="ExportExcel"><i class="fas fa-file-excel me-1 text-success"></i> Экспорт в Excel</a></li>
+                                <li><a class="dropdown-item" asp-page-handler="ExportCsv"><i class="fas fa-file-csv me-1 text-primary"></i> Экспорт в CSV</a></li>
+                                <li><a class="dropdown-item" asp-page-handler="ExportPdf"><i class="fas fa-file-pdf me-1 text-danger"></i> Экспорт в PDF</a></li>
+                            </ul>
+                        </div>
+                        <a asp-page="./TaskImport" class="btn btn-light btn-sm ms-2">
+                            <i class="fas fa-file-import me-1"></i> Импорт
+                        </a>
+                        <a asp-page="./TaskCreate" class="btn btn-light btn-sm ms-2">
+                            <i class="fas fa-plus me-1"></i> Добавить задачу
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        var statusClass = Model.StatusMessage.Contains("Ошибка") ? "danger" : "success";
+                        <div class="alert alert-@statusClass alert-dismissible fade show" role="alert">
+                            @Model.StatusMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <!-- Фильтры -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0 d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-filter me-2"></i>Фильтры</span>
+                                        <button class="btn btn-sm btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFilters" aria-expanded="true" aria-controls="collapseFilters">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </button>
+                                    </h6>
+                                </div>
+                                <div class="collapse show" id="collapseFilters">
+                                    <div class="card-body">
+                                        <form method="get">
+                                            <div class="row g-3">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label for="searchTerm" class="form-label">Поиск</label>
+                                                        <input type="text" id="searchTerm" name="SearchTerm" class="form-control" placeholder="Поиск по названию..." value="@Model.SearchTerm">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label for="departmentId" class="form-label">Отдел</label>
+                                                        <select id="departmentId" name="DepartmentId" class="form-select" asp-items="Model.DepartmentList" onchange="updateEmployees()">
+                                                            <option value="">-- Все отделы --</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label for="employeeId" class="form-label">Сотрудник</label>
+                                                        <select id="employeeId" name="EmployeeId" class="form-select" asp-items="Model.EmployeeList">
+                                                            <option value="">-- Все сотрудники --</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label for="minImportance" class="form-label">Минимальная важность</label>
+                                                        <select id="minImportance" name="MinImportance" class="form-select" asp-items="Model.ImportanceList">
+                                                            <option value="">-- Любая важность --</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label for="startDate" class="form-label">С даты</label>
+                                                        <input type="date" id="startDate" name="StartDate" class="form-control" value="@(Model.StartDate?.ToString("yyyy-MM-dd"))">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label for="endDate" class="form-label">По дату</label>
+                                                        <input type="date" id="endDate" name="EndDate" class="form-control" value="@(Model.EndDate?.ToString("yyyy-MM-dd"))">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <div class="form-group">
+                                                        <label for="sortOrder" class="form-label">Сортировка</label>
+                                                        <select id="sortOrder" name="SortOrder" class="form-select">
+                                                            <option value="" selected="@(string.IsNullOrEmpty(Model.SortOrder))">Новые сверху</option>
+                                                            <option value="date_asc" selected="@(Model.SortOrder == "date_asc")">Старые сверху</option>
+                                                            <option value="title_asc" selected="@(Model.SortOrder == "title_asc")">По названию (А-Я)</option>
+                                                            <option value="title_desc" selected="@(Model.SortOrder == "title_desc")">По названию (Я-А)</option>
+                                                            <option value="importance_desc" selected="@(Model.SortOrder == "importance_desc")">По важности (убыв.)</option>
+                                                            <option value="importance_asc" selected="@(Model.SortOrder == "importance_asc")">По важности (возр.)</option>
+                                                            <option value="efficiency_desc" selected="@(Model.SortOrder == "efficiency_desc")">По эффективности (убыв.)</option>
+                                                            <option value="efficiency_asc" selected="@(Model.SortOrder == "efficiency_asc")">По эффективности (возр.)</option>
+
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 d-flex align-items-end">
+                                                    <div class="form-group">
+                                                        <button type="submit" class="btn btn-primary me-2">
+                                                            <i class="fas fa-search me-1"></i> Применить фильтры
+                                                        </button>
+                                                        <a asp-page="./Tasks" class="btn btn-outline-secondary">
+                                                            <i class="fas fa-redo me-1"></i> Сбросить
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Таблица с задачами -->
+                    @if (Model.Tasks.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th width="5%">ID</th>
+                                        <th width="20%">Задача</th>
+                                        <th width="20%">Сотрудник</th>
+                                        <th width="10%">Дата</th>
+                                        <th width="10%">Важность</th>
+                                        <th width="10%">Эффективность</th>
+                                        <th width="10%">Внешний ID</th>
+                                        <th width="15%">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var task in Model.Tasks)
+                                    {
+                                        <tr>
+                                            <td>@task.Id</td>
+                                            <td>
+                                                <div class="fw-bold">@task.Title</div>
+                                                @if (!string.IsNullOrEmpty(task.Description))
+                                                {
+                                                    <small class="text-muted">
+                                                        @(task.Description.Length > 50 
+                                                            ? $"{task.Description.Substring(0, 50)}..." 
+                                                            : task.Description)
+                                                    </small>
+                                                }
+                                            </td>
+                                            <td>
+                                                <a asp-page="/Employees/Details" asp-route-id="@task.EmployeeId" class="text-decoration-none">
+                                                    @task.Employee.FullName
+                                                </a>
+                                                <div><small>@task.Employee.Department.Name</small></div>
+                                            </td>
+                                            <td>@task.CompletedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                            <td>
+                                                <span class="badge bg-@Model.GetImportanceClass(task.Importance)">
+                                                    @Model.GetImportanceText(task.Importance)
+                                                </span>
+                                            </td>
+                                            <td>
+                                                @if (task.EfficiencyScore.HasValue)
+                                                {
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="progress flex-grow-1" style="height: 8px;">
+                                                            <div class="progress-bar bg-@Model.GetEfficiencyClass(task.EfficiencyScore)"
+                                                                 role="progressbar"
+                                                                 style="width: @task.EfficiencyScore%"
+                                                                 aria-valuenow="@task.EfficiencyScore"
+                                                                 aria-valuemin="0"
+                                                                 aria-valuemax="100"></div>
+                                                        </div>
+                                                        <span class="ms-2">@task.EfficiencyScore.Value.ToString("F1")%</span>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span>Не оценено</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(task.ExternalSystemId))
+                                                {
+                                                    <code>@task.ExternalSystemId</code>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="btn-group">
+                                                    <a asp-page="./TaskDetails" asp-route-id="@task.Id" class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a asp-page="./TaskEdit" asp-route-id="@task.Id" class="btn btn-outline-secondary btn-sm">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteTaskModal" 
+                                                            data-id="@task.Id" 
+                                                            data-title="@task.Title"
+                                                            data-employee="@task.Employee.FullName"
+                                                            onclick="setDeleteTaskData(this)">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Пагинация -->
+                        @if (Model.TotalPages > 1)
+                        {
+                            <nav aria-label="Page navigation" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    @if (Model.CurrentPage > 1)
+                                    {
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Model.GetPageUrl(1)" aria-label="First">
+                                                <span aria-hidden="true">&laquo;&laquo;</span>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Model.GetPageUrl(Model.CurrentPage - 1)" aria-label="Previous">
+                                                <span aria-hidden="true">&laquo;</span>
+                                            </a>
+                                        </li>
+                                    }
+
+                                    @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
+                                    {
+                                        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                            <a class="page-link" href="@Model.GetPageUrl(i)">@i</a>
+                                        </li>
+                                    }
+
+                                    @if (Model.CurrentPage < Model.TotalPages)
+                                    {
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Model.GetPageUrl(Model.CurrentPage + 1)" aria-label="Next">
+                                                <span aria-hidden="true">&raquo;</span>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Model.GetPageUrl(Model.TotalPages)" aria-label="Last">
+                                                <span aria-hidden="true">&raquo;&raquo;</span>
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </nav>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> По вашему запросу не найдено ни одной задачи.
+                            <a asp-page="./Tasks" class="alert-link">Сбросить фильтры</a> или 
+                            <a asp-page="./TaskCreate" class="alert-link">создать новую задачу</a>.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для подтверждения удаления -->
+<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Delete">
+                <input type="hidden" id="deleteTaskId" name="id" />
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteTaskModalLabel">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Вы уверены, что хотите удалить задачу <strong id="deleteTaskTitle"></strong> сотрудника <strong id="deleteTaskEmployee"></strong>?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Внимание!</strong> Это действие нельзя будет отменить. Удаление задачи может повлиять на оценку эффективности сотрудника.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Удалить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Функция для обновления списка сотрудников при изменении отдела
+        function updateEmployees() {
+            const departmentId = document.getElementById('departmentId').value;
+            
+            // Если выбран отдел, показываем только сотрудников этого отдела
+            const formData = new FormData();
+            formData.append('departmentId', departmentId);
+            
+            fetch('/api/employees/bydepartment', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const employeeSelect = document.getElementById('employeeId');
+                
+                // Очищаем текущий список
+                employeeSelect.innerHTML = '<option value="">-- Все сотрудники --</option>';
+                
+                // Добавляем новых сотрудников
+                data.forEach(employee => {
+                    const option = document.createElement('option');
+                    option.value = employee.id;
+                    option.textContent = employee.fullName;
+                    employeeSelect.appendChild(option);
+                });
+            });
+        }
+        
+        // Функция для установки данных в модальное окно удаления
+        function setDeleteTaskData(button) {
+            document.getElementById('deleteTaskId').value = button.getAttribute('data-id');
+            document.getElementById('deleteTaskTitle').textContent = button.getAttribute('data-title');
+            document.getElementById('deleteTaskEmployee').textContent = button.getAttribute('data-employee');
+        }
+        
+        // Инициализация тултипов
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+}

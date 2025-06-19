@@ -102,7 +102,48 @@ namespace RazorPagesNew.Services.Implementation
         }
 
         #endregion
+       /* #region Операции с отделениями банка
 
+        public async Task<IEnumerable<Employee>> GetEmployeesByBankBranchAsync(int bankBranchId)
+        {
+            return await _context.Employees
+                .Where(e => e.BankBranchId == bankBranchId)
+                .Include(e => e.Department)
+                .Include(e => e.BankBranch)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<bool> AssignEmployeeToBankBranchAsync(int employeeId, int bankBranchId)
+        {
+            var employee = await _context.Employees.FindAsync(employeeId);
+            if (employee == null)
+                return false;
+
+            // Проверяем существование отделения
+            var branchExists = await _context.BankBranches.AnyAsync(b => b.Id == bankBranchId);
+            if (!branchExists && bankBranchId != 0) // 0 может означать "Не назначено"
+                return false;
+
+            employee.BankBranchId = bankBranchId == 0 ? null : bankBranchId;
+            employee.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<Dictionary<int, int>> GetEmployeeCountByBankBranchAsync()
+        {
+            var result = await _context.Employees
+                .Where(e => e.BankBranchId.HasValue)
+                .GroupBy(e => e.BankBranchId.Value)
+                .Select(g => new { BranchId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.BranchId, x => x.Count);
+
+            return result;
+        }
+
+        #endregion*/
         #region Операции с записями активности
 
         public async Task<IEnumerable<AttendanceRecord>> GetEmployeeAttendanceAsync(int employeeId, DateTime? startDate = null, DateTime? endDate = null)

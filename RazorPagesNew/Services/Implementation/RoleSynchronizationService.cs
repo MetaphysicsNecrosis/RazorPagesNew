@@ -209,8 +209,14 @@ namespace RazorPagesNew.Services.Implementation
             // 2. Для каждого пользователя из Identity проверяем наличие в кастомной системе
             foreach (var identityUser in identityUsers)
             {
-                var customUser = customUsers.FirstOrDefault(u => u.IdentityUserId == identityUser.Id);
-
+                bool isSkip = false;
+                var customUser = customUsers.FirstOrDefault(u => u.IdentityUserId.Trim() == identityUser.Id);
+                /*foreach (var cuser in customUsers) 
+                {
+                    if(String.Equals(cuser.IdentityUserId.Trim(),identityUser.Id)) isSkip = true;
+                }
+                if (isSkip) continue;*/
+                
                 // Если пользователя нет в кастомной системе, создаем его
                 if (customUser == null)
                 {

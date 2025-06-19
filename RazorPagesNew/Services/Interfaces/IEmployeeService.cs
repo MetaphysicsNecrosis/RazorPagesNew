@@ -30,5 +30,15 @@ namespace RazorPagesNew.Services.Interfaces
         Task<bool> UnlinkEmployeeFromUserAsync(int employeeId);
 
         Task<List<Department>> GetAllDepartmentsAsync();
+        // Дополнение к IEmployeeService.cs, добавьте эти методы в интерфейс
+
+        // Получение сотрудников по отделению банка
+     /*   Task<IEnumerable<Employee>> GetEmployeesByBankBranchAsync(int bankBranchId);
+
+        // Назначение сотрудника в отделение
+        Task<bool> AssignEmployeeToBankBranchAsync(int employeeId, int bankBranchId);
+
+        // Статистика по отделениям
+        Task<Dictionary<int, int>> GetEmployeeCountByBankBranchAsync();*/
     }
 }
